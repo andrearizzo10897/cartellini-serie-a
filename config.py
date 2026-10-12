@@ -1,6 +1,8 @@
 """Percorsi e impostazioni generali."""
-from datetime import date
+from datetime import datetime
 from pathlib import Path
+
+from dateutil import tz
 
 BASE = Path(__file__).resolve().parent
 DATI = BASE / "dati"
@@ -13,7 +15,12 @@ def stagione_di(d):
     return d.year if d.month >= 7 else d.year - 1
 
 
-STAGIONE_CORRENTE = stagione_di(date.today())
+def adesso():
+    """Ora attuale in Italia (anche sui server di GitHub, che usano l'ora UTC)."""
+    return datetime.now(tz.gettz("Europe/Rome")).replace(tzinfo=None)
+
+
+STAGIONE_CORRENTE = stagione_di(adesso().date())
 STAGIONI_STORICO = [STAGIONE_CORRENTE - 3, STAGIONE_CORRENTE - 2, STAGIONE_CORRENTE - 1, STAGIONE_CORRENTE]
 # Lo storico parte dal 2023/24 come richiesto: se la stagione corrente cambia, si sposta in avanti
 STAGIONI_STORICO = [s for s in STAGIONI_STORICO if s >= 2023]

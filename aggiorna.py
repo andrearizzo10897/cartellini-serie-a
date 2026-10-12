@@ -21,7 +21,7 @@ GIORNI_AVANTI = 8  # quanti giorni di calendario mostrare
 
 
 def main():
-    oggi = date.today()
+    oggi = config.adesso().date()
     anno = config.STAGIONE_CORRENTE
     stato = []
 
@@ -98,7 +98,7 @@ def main():
                  "over": {s: calcoli.frequenza_oltre(df["g_tot"], s) for s in calcoli.SOGLIE},
                  "arbitri_noti": int(df["arbitro"].notna().sum())},
         "stato": stato,
-        "aggiornato": datetime.now(),
+        "aggiornato": config.adesso(),
         "partite_giocate": len(finite),
     }
     pagina.genera(partite, sezioni, config.OUTPUT)
