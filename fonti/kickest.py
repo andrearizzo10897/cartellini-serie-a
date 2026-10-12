@@ -38,7 +38,8 @@ def _scarica_stagione(anno):
         r = scarica(URL, params={"category": "1", "season": str(ID_STAGIONE[anno]), "matchdays": giornate,
                                  "mode": "1", "language": "it"},
                     headers={"X-Requested-With": "XMLHttpRequest",
-                             "Referer": "https://www.kickest.it/it/serie-a/statistiche/giocatori/tabellone"})
+                             "Referer": "https://www.kickest.it/it/serie-a/statistiche/giocatori/tabellone"},
+                    timeout=120, tentativi=3)
         js = r.json()
     except Exception as e:
         print("  ! Kickest {}: {}".format(anno, e))

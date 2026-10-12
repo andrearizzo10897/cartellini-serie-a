@@ -12,7 +12,7 @@ UA = {
 }
 
 
-def scarica(url, params=None, headers=None, tentativi=3, pausa=0.3):
+def scarica(url, params=None, headers=None, tentativi=3, pausa=0.3, timeout=40):
     """GET con qualche tentativo; una piccola pausa tiene bassa la pressione sui siti."""
     h = dict(UA)
     if headers:
@@ -20,7 +20,7 @@ def scarica(url, params=None, headers=None, tentativi=3, pausa=0.3):
     errore = None
     for i in range(tentativi):
         try:
-            r = requests.get(url, params=params, headers=h, timeout=40)
+            r = requests.get(url, params=params, headers=h, timeout=timeout)
             r.raise_for_status()
             time.sleep(pausa)
             return r

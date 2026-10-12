@@ -35,6 +35,10 @@ def main():
 
     print("3/5 Giocatori (Kickest, stagioni passate)")
     kick = kickest.carica()
+    mancanti = [s for s in range(max(2023, anno - 3), anno) if not len(kick[kick["stagione"] == s])]
+    if mancanti:
+        stato.append("Kickest non ha risposto per le stagioni: {}. Riproverò al prossimo aggiornamento."
+                     .format(", ".join("{}/{}".format(s, str(s + 1)[2:]) for s in mancanti)))
     if not len(kick[kick["stagione"] == anno]):
         stato.append("Kickest non ha ancora pubblicato la stagione {}/{}: per quella in corso uso ESPN."
                      .format(anno, str(anno + 1)[2:]))
