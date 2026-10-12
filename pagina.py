@@ -108,8 +108,27 @@ if(ag){ag.addEventListener('click',function(){
  fetch('/aggiorna',{method:'POST'}).then(function(r){if(r.status===404)throw new Error('statica');return r.json()}).then(function(j){
   if(j.ok){msg.textContent='Fatto, ricarico...';location.reload()}else{ag.disabled=false;msg.textContent='Non riuscito: '+j.messaggio}
  }).catch(function(e){ag.disabled=false;
-  if(e.message==='statica'){msg.textContent='Versione online: si aggiorna da sola ogni 20 minuti. Ricarico l’ultima.';setTimeout(function(){location.reload()},1200)}
+  if(e.message==='statica'){online()}
   else{msg.textContent='Impossibile aggiornare: il server non risponde. Riavvia "Avvia".'}})})}
+var GH={t:'__DISPATCH_TOKEN__',r:'andrearizzo10897/cartellini-serie-a',ref:'main'};
+function ghf(url,opz){opz=opz||{};opz.headers={'Authorization':'Bearer '+GH.t,'Accept':'application/vnd.github+json'};return fetch('https://api.github.com/repos/'+GH.r+url,opz)}
+function online(){
+ if(GH.t.indexOf('__')===0){msg.textContent='Versione online: si aggiorna da sola ogni 20 minuti. Ricarico l’ultima.';setTimeout(function(){location.reload()},1200);return}
+ var ult=0;try{ult=parseInt(localStorage.getItem('agg_ult')||'0',10)}catch(e){}
+ var resto=300000-(Date.now()-ult);
+ if(resto>0){msg.textContent='Aggiornamento appena richiesto: riprova fra '+Math.ceil(resto/60000)+' min.';return}
+ ag.disabled=true;msg.textContent='Richiesta inviata...';var t1=new Date(Date.now()-60000).toISOString();
+ ghf('/actions/workflows/aggiorna.yml/dispatches',{method:'POST',body:JSON.stringify({ref:GH.ref})}).then(function(r){
+  if(r.status!==204)throw new Error('http '+r.status);
+  try{localStorage.setItem('agg_ult',String(Date.now()))}catch(e){}
+  msg.textContent='Aggiorno online... circa 2 minuti, poi ricarico da solo.';
+  var n=0,giro=function(){n++;if(n>30){msg.textContent='Ci sta mettendo più del solito: ricarica fra qualche minuto.';ag.disabled=false;return}
+   ghf('/actions/runs?event=workflow_dispatch&created=%3E'+t1.slice(0,19)+'Z&per_page=1').then(function(r){return r.json()}).then(function(j){
+    var run=(j.workflow_runs||[])[0];
+    if(run&&run.status==='completed'){if(run.conclusion==='success'){msg.textContent='Fatto, ricarico...';setTimeout(function(){location.reload()},6000)}else{msg.textContent='Aggiornamento non riuscito: riprova più tardi.';ag.disabled=false}}
+    else setTimeout(giro,8000)}).catch(function(){setTimeout(giro,8000)})};
+  setTimeout(giro,10000)
+ }).catch(function(e){ag.disabled=false;msg.textContent='Non riesco ad avviare l’aggiornamento ('+e.message+'). Si aggiorna comunque da solo ogni 20 minuti.'})}
 var tm=$('#tema');if(tm){tm.addEventListener('click',function(){var d=document.documentElement,c=d.getAttribute('data-theme');
  var scuro=c?c==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;d.setAttribute('data-theme',scuro?'light':'dark')})}
 })();
