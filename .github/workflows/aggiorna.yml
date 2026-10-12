@@ -1,0 +1,38 @@
+# Aggiorna la pagina da solo e la pubblica su GitHub Pages (apribile dal telefono).
+name: Aggiorna cartellini
+on:
+  schedule:
+    - cron: "*/20 8-22 * * *"   # ogni 20 minuti, dalle 10 alle 24 ora italiana (orario UTC)
+  workflow_dispatch: {}          # pulsante "Run workflow" per aggiornare subito a mano
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Ripristina dati salvati (archivio arbitri e cache)
+        uses: actions/cache@v4
+        with:
+          path: dati
+          key: dati-${{ github.run_id }}
+          restore-keys: dati-
+      - run: pip install pandas requests python-dateutil
+      - name: Chiave API-Football
+        run: echo "APIFOOTBALL_KEY=${{ secrets.APIFOOTBALL_KEY }}" > .env
+      - run: python aggiorna.py
+      - run: mkdir site && cp index.html site/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: deploy
+        uses: actions/deploy-pages@v4
