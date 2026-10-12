@@ -19,3 +19,10 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
 ## Da fare (idee)
 - Pubblicare con GitHub Actions + Pages (workflow già in `.github/workflows/aggiorna.yml`, serve il secret APIFOOTBALL_KEY).
 - Backtest del modello; eventuale aggiunta di altri campionati.
+
+## Versione online (attiva dal 12/10/2026)
+- Repository pubblico: https://github.com/andrearizzo10897/cartellini-serie-a
+- Pagina: https://andrearizzo10897.github.io/cartellini-serie-a/ (si aggiorna da sola ogni 20 minuti, dalle 10 a mezzanotte)
+- Il secret APIFOOTBALL_KEY è nei Secrets del repository. Per aggiornare subito a mano: scheda Actions -> "Aggiorna cartellini" -> Run workflow.
+- Per modificare il codice: cambia i file in locale, poi git add/commit/push (il push rilancia da solo la pubblicazione al prossimo ciclo).
+- Su GitHub gli aggiornamenti programmati si fermano se il repository resta 60 giorni senza attività: basta un commit.
