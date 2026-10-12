@@ -31,8 +31,36 @@ jobs:
       - name: Chiave API-Football
         run: echo "APIFOOTBALL_KEY=${{ secrets.APIFOOTBALL_KEY }}" > .env
       - run: python aggiorna.py
-      - run: mkdir site && cp index.html site/index.html
+      - name: Controlla la password della pagina
+        id: pw
+        env:
+          PW: ${{ secrets.PAGINA_PASSWORD }}
+        run: |
+          if [ -z "$PW" ]; then
+            echo "::warning::Manca il secret PAGINA_PASSWORD: non pubblico nulla (resta online l'ultima versione)."
+            echo "ok=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=si" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.pw.outputs.ok == 'si'
+        with: { node-version: "20" }
+      - name: Cifra la pagina con la password
+        if: steps.pw.outputs.ok == 'si'
+        env:
+          PW: ${{ secrets.PAGINA_PASSWORD }}
+        run: |
+          mkdir site
+          npx -y staticrypt@3.5.4 index.html -p "$PW" -d site --short --remember 30 \
+            --template-title "Cartellini Serie A" \
+            --template-instructions "Pagina privata: inserisci la password che ti è stata data." \
+            --template-button "Entra" --template-placeholder "Password" \
+            --template-error "Password errata" --template-remember "Ricordami su questo dispositivo"
+          printf 'User-agent: *\nDisallow: /\n' > site/robots.txt
+          test -s site/index.html && ! grep -q "Tremolada" site/index.html && echo "Pagina cifrata correttamente"
       - uses: actions/upload-pages-artifact@v3
+        if: steps.pw.outputs.ok == 'si'
         with: { path: site }
       - id: deploy
+        if: steps.pw.outputs.ok == 'si'
         uses: actions/deploy-pages@v4
