@@ -135,12 +135,12 @@ class CostanteStagione:
 class ModelloPoissonBT:
     """Regressione di Poisson di modello.py, rifittata ad ogni giornata solo sui dati precedenti."""
 
-    def __init__(self, df, par=None, nome="poisson"):
+    def __init__(self, df, par=None, nome="poisson", allenatori=None):
         self.nome = nome
         self.par = par or {}
         pieno = dict(modello.PARAMETRI)
         pieno.update(self.par)
-        righe, _ = modello.prepara_righe(df, pieno)
+        righe, _ = modello.prepara_righe(df, pieno, allenatori)
         self.righe = righe
         self.indice = {}
         for k, r in righe.iterrows():

@@ -9,8 +9,6 @@ from config import FORMA_BREVE, FORMA_LUNGA, MINUTI_PRIOR, PESO_STAGIONE
 from utils import e_derby, nome_squadra, senza_accenti
 
 SOGLIE = [3.5, 4.5, 5.5]
-MINUTI_TITOLARE = 85   # minuti medi attesi per un titolare
-MINUTI_SUBENTRO = 25   # minuti medi attesi per chi entra dalla panchina
 
 
 # ---------------------------------------------------------------------------------------------
@@ -242,7 +240,7 @@ def fattore_arbitro(df, arbitro):
     n = len(g)
     f = 1.0 + (g["g_tot"].mean() / lega - 1.0) * n / (n + 15.0)
     return f, {"partite": n, "gialli": float(g["g_tot"].mean()), "rossi": float(g["r_tot"].mean()),
-               "lega": float(lega), "ultime5": float(g.sort_values("data").tail(5)["g_tot"].mean()),
+               "lega": float(df["g_tot"].tail(380).mean()), "ultime5": float(g.sort_values("data").tail(5)["g_tot"].mean()),
                "over35": frequenza_oltre(g["g_tot"], 3.5), "over45": frequenza_oltre(g["g_tot"], 4.5),
                "over55": frequenza_oltre(g["g_tot"], 5.5)}
 
@@ -325,94 +323,148 @@ def aggrega_espn(partite_finite):
     return giocatori, ultima
 
 
-class ProfiliGiocatori:
-    def __init__(self, kick, espn_agg, anno):
-        self.anno = anno
-        self.espn = espn_agg
-        self.cache_link = {}
-        self.prior = {}
-        for ruolo, g in kick.groupby("ruolo"):
-            m = max(g["minuti"].sum(), 1.0)
-            self.prior[ruolo] = {"y": g["gialli"].sum() / m * 90, "f": g["falli"].sum() / m * 90,
-                                 "t": g["contrasti"].sum() / m * 90}
-        self.storia = {pid: g for pid, g in kick.groupby("id")}
-        ultimi = kick.sort_values("stagione").groupby("id").tail(1)
-        self.candidati = [(r.id, set(r.nome_completo.split()), r.squadra, r.ruolo) for r in ultimi.itertuples()]
+class _Collegamento:
+    """Collega un giocatore di ESPN a una riga di storico (Kickest o Transfermarkt) dal nome e dalla squadra."""
 
-    def _collega(self, nome, squadra):
+    def __init__(self, tabella, col_id):
+        ultimi = tabella.sort_values("stagione").groupby(col_id).tail(1)
+        self.candidati = [(getattr(r, col_id), set(r.nome_completo.replace("-", " ").replace("'", " ").split()), r.squadra)
+                          for r in ultimi.itertuples()]
+        self.cache = {}
+
+    def trova(self, nome, squadra):
         chiave = (nome, squadra)
-        if chiave in self.cache_link:
-            return self.cache_link[chiave]
+        if chiave in self.cache:
+            return self.cache[chiave]
         tok = set(senza_accenti(nome).lower().replace("-", " ").replace("'", " ").split())
         migliore, punteggio = None, 0.0
-        for pid, tk, sq, _ in self.candidati:
+        for pid, tk, sq in self.candidati:
             comuni = len(tok & tk)
             if not comuni:
                 continue
             s = comuni / float(len(tok | tk)) + (0.3 if sq == squadra else 0.0)
             if s > punteggio:
                 migliore, punteggio = pid, s
-        self.cache_link[chiave] = migliore if punteggio >= 0.55 else None
-        return self.cache_link[chiave]
+        self.cache[chiave] = migliore if punteggio >= 0.55 else None
+        return self.cache[chiave]
+
+
+class ProfiliGiocatori:
+    """Per ogni giocatore: gialli attesi in una partita intera (lam), ruolo, probabilità di uscire/entrare.
+
+    Storico dei cartellini: Kickest, e dove Kickest non conosce il giocatore Transfermarkt. Ogni stagione conta
+    secondo PESO_STAGIONE. Il rischio non è sui minuti ma sulla "esposizione": un minuto nel finale vale più di
+    uno iniziale (vedi presenza.py), quindi titolari e subentrati si confrontano sulla stessa scala.
+    """
+
+    def __init__(self, kick, tm, espn_agg, anno, presenza):
+        self.anno = anno
+        self.espn = espn_agg
+        self.pm = presenza
+        kick = kick.assign(entrate=(kick["presenze"] - kick["titolare"]).clip(lower=0))
+        self.prior = {}
+        for ruolo, g in kick.groupby("ruolo"):
+            m = max(g["minuti"].sum(), 1.0)
+            self.prior[ruolo] = {"y": g["gialli"].sum() / m * 90, "f": g["falli"].sum() / m * 90,
+                                 "t": g["contrasti"].sum() / m * 90}
+        self.storia = {pid: g for pid, g in kick.groupby("id")}
+        self.collega_k = _Collegamento(kick, "id")
+        self.storia_tm, self.collega_tm = {}, None
+        if tm is not None and len(tm):
+            tm = tm[tm["stagione"] < anno]
+            self.storia_tm = {pid: g for pid, g in tm.groupby("id_tm")}
+            self.collega_tm = _Collegamento(tm, "id_tm")
+        self.exp_titolare = {r: presenza.esposizione_titolare(None, r)[0] for r in "PDCA"}
+        self.exp_subentrato = presenza.esposizione_subentrato()
+        # gialli per "partita intera" tipici di ogni ruolo: serve da punto di partenza per chi ha poco storico
+        y = {r: 0.0 for r in "PDCA"}
+        e = {r: 1e-9 for r in "PDCA"}
+        for r in kick.itertuples():
+            w = PESO_STAGIONE.get(anno - r.stagione, 0.2)
+            e[r.ruolo] += w * (r.titolare * self.exp_titolare[r.ruolo] + r.entrate * self.exp_subentrato)
+            y[r.ruolo] += w * r.gialli
+        self.lam_ruolo = {r: y[r] / e[r] for r in "PDCA"}
+
+    def _esposizione(self, ruolo, titolare, entrate):
+        return titolare * self.exp_titolare[ruolo] + entrate * self.exp_subentrato
 
     def profilo(self, espn_id, nome, squadra, ruolo_espn):
-        pid = self._collega(nome, squadra)
+        pid = self.collega_k.trova(nome, squadra)
         storia = self.storia.get(pid) if pid else None
+        fonte_tm = False
+        if storia is None and self.collega_tm is not None:   # Kickest non lo conosce: provo Transfermarkt
+            pid_tm = self.collega_tm.trova(nome, squadra)
+            if pid_tm is not None:
+                storia, fonte_tm = self.storia_tm.get(pid_tm), True
         if storia is not None:
             ruolo = storia.sort_values("stagione").iloc[-1]["ruolo"]
         else:
             ruolo = _RUOLO_ESPN.get(ruolo_espn, "C")
+        if espn_id in self.pm.portieri:
+            ruolo = "P"
+        # -- numeri da mostrare (gialli, falli e contrasti ogni 90 minuti, con la stessa prudenza di prima)
         pr = self.prior.get(ruolo, {"y": 0.2, "f": 1.0, "t": 1.0})
         w_min = w_giallo = w_falli = 0.0
         w_min_k = w_tack = 0.0
         gialli_k = minuti_k = 0.0
+        # -- gialli attesi in una partita intera
+        w_y = w_e = 0.0
         if storia is not None:
             for r in storia.itertuples():
                 w = PESO_STAGIONE.get(self.anno - r.stagione, 0.2)
                 w_min += w * r.minuti
                 w_giallo += w * r.gialli
-                w_falli += w * r.falli
-                w_min_k += w * r.minuti
-                w_tack += w * r.contrasti
                 gialli_k += r.gialli
                 minuti_k += r.minuti
+                if not fonte_tm:
+                    w_falli += w * r.falli
+                    w_min_k += w * r.minuti
+                    w_tack += w * r.contrasti
+                w_y += w * r.gialli
+                w_e += w * self._esposizione(ruolo, r.titolare, r.entrate)
         cur = self.espn.get(espn_id)
         peso0 = PESO_STAGIONE[0]
         if cur:
             w_min += peso0 * cur["minuti"]
             w_giallo += peso0 * cur["gialli"]
             w_falli += peso0 * cur["falli"]
+            w_y += peso0 * cur["gialli"]
+            w_e += peso0 * self._esposizione(ruolo, max(cur["presenze"] - cur["entrate"], 0), cur["entrate"])
         K = MINUTI_PRIOR / 90.0
         y90 = (w_giallo + pr["y"] * K) / (w_min / 90.0 + K)
         f90 = (w_falli + pr["f"] * K) / (w_min / 90.0 + K)
         t90 = (w_tack + pr["t"] * K) / (w_min_k / 90.0 + K)
-        prior_entra = 0.03 if ruolo == "P" else 0.45
-        if cur and cur["panchine"] + cur["presenze"] - cur["entrate"] > 0:
-            p_entra = (cur["entrate"] + prior_entra * 4) / (cur["panchine"] + 4.0)
-        else:
-            p_entra = prior_entra
-        return {"id": espn_id, "nome": nome, "ruolo": ruolo, "y90": y90, "f90": f90, "t90": t90,
-                "p_entra": p_entra, "collegato": pid is not None,
+        lam = (w_y + self.lam_ruolo[ruolo] * K) / (w_e + K)
+        return {"id": espn_id, "nome": nome, "ruolo": ruolo, "y90": y90, "f90": f90, "t90": t90, "lam": lam,
+                "collegato": storia is not None,
                 "gialli_stag": cur["gialli"] if cur else 0, "presenze_stag": cur["presenze"] if cur else 0,
                 "gialli_prec": gialli_k, "minuti_prec": minuti_k}
 
 
-def prob_giallo(y90, minuti, fattore):
-    return 1.0 - math.exp(-y90 * fattore * minuti / 90.0)
+def riconcilia_squadra(profili_titolari, profili_panchina, nome_squadra, atteso_squadra, pm):
+    """Calcola le probabilità di tutti i giocatori di una squadra e le riporta al totale atteso dal modello di squadra.
 
-
-def fattore_riconciliazione(titolari, panchina, atteso_squadra):
-    """Quanto scalare le frequenze di giallo dei giocatori perché la loro somma torni al totale della squadra.
-
-    Il totale di squadra è la parte più solida del modello (verificata con il backtest): i gialli/90 dei
-    giocatori, invece, vengono da stagioni con più gialli di oggi e già contengono la propensione della
-    squadra. Si scala quindi tutta la rosa con lo stesso numero, senza cambiare l'ordine tra i giocatori.
+    Passi: (1) probabilità di entrare dei panchinari, con il vincolo del numero di cambi della squadra;
+    (2) gialli attesi di ogni giocatore = lam x esposizione (titolari: quanto restano in campo; panchinari:
+    probabilità di entrare x quanto resta della partita); (3) un unico fattore k porta la somma dei giocatori
+    ai gialli attesi dalla squadra; (4) probabilità = almeno un giallo, tenendo conto di quando può uscire/entrare.
     """
-    atteso_giocatori = sum(g["y90"] * g["minuti"] / 90.0 for g in titolari)
-    atteso_giocatori += sum(g["p_entra"] * g["y90"] * g["minuti"] / 90.0 for g in panchina)
-    if atteso_giocatori <= 0:
-        return 1.0
-    return max(0.4, min(2.0, atteso_squadra / atteso_giocatori))
+    ids = [g["id"] for g in profili_panchina]
+    ruoli = {g["id"]: g["ruolo"] for g in profili_panchina}
+    pe = pm.p_entra_squadra(ids, ruoli, pm.cambi_attesi(nome_squadra)) if ids else []
+    for g, p_in in zip(profili_panchina, pe):
+        g["p_entra"] = float(p_in)
+    for g in profili_titolari:
+        g["esposizione"], g["p_esce"], _ = pm.esposizione_titolare(g["id"], g["ruolo"])
+    atteso = sum(g["lam"] * g["esposizione"] for g in profili_titolari)
+    atteso += sum(g["p_entra"] * g["lam"] * pm.esposizione_subentrato() for g in profili_panchina)
+    k = max(0.4, min(2.0, atteso_squadra / atteso)) if atteso > 0 else 1.0
+    for g in profili_titolari:
+        g["p_giallo"] = pm.p_giallo_titolare(g["lam"] * k, g["id"], g["ruolo"])
+    for g in profili_panchina:
+        g["p_se_entra"] = pm.p_giallo_se_entra(g["lam"] * k)
+        g["p_giallo"] = g["p_entra"] * g["p_se_entra"]
+    return k
 
 
 # ---------------------------------------------------------------------------------------------
@@ -434,7 +486,7 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
     for s in SOGLIE:
         soglie.append({
             "soglia": s, "prob": prob_oltre(totale, ctx["rapporto_var"], s),
-            "lega": frequenza_oltre(df["g_tot"], s),
+            "lega": frequenza_oltre(df.tail(380)["g_tot"], s),
             "tipo": frequenza_oltre(df[df["tipo"] == tipo]["g_tot"], s),
             "arbitro": info_arb["over" + str(int(s * 10))] if info_arb else None,
         })
@@ -444,19 +496,9 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
         f = forma.get(lato) if forma else None
         titolari, panchina = [], []
         for g in (f["giocatori"] if f else []):
-            p = ctx["profili"].profilo(g["id"], g["nome"], sq, g["ruolo_espn"])
-            if g["titolare"]:
-                p["minuti"] = MINUTI_TITOLARE if p["ruolo"] != "P" else 90
-                titolari.append(p)
-            else:
-                p["minuti"] = MINUTI_SUBENTRO
-                panchina.append(p)
-        k = fattore_riconciliazione(titolari, panchina, atteso_sq)
-        for p in titolari:
-            p["p_giallo"] = prob_giallo(p["y90"], p["minuti"], k)
-        for p in panchina:
-            p["p_se_entra"] = prob_giallo(p["y90"], MINUTI_SUBENTRO, k)
-            p["p_giallo"] = p["p_entra"] * p["p_se_entra"]
+            pg = ctx["profili"].profilo(g["id"], g["nome"], sq, g["ruolo_espn"])
+            (titolari if g["titolare"] else panchina).append(pg)
+        riconcilia_squadra(titolari, panchina, sq, atteso_sq, ctx["presenza"])
         ordine = {"P": 0, "D": 1, "C": 2, "A": 3}
         titolari.sort(key=lambda p: (ordine.get(p["ruolo"], 9), -p["p_giallo"]))
         panchina.sort(key=lambda p: -p["p_giallo"])

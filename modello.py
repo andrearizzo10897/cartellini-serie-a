@@ -17,6 +17,9 @@ PARAMETRI = {
     "emivita_livello": 150,  # partite dopo cui la media di lega "dimentica" metà del passato
     "alfa_falli": 0.12,      # velocità con cui la media dei falli di una squadra segue le ultime partite
     "variabili": ("equilibrio", "forza", "falli_f", "falli_s"),
+    "usa_allenatore": False,    # effetto dell'allenatore della squadra (e, con allenatore_avv, di quello avversario)
+    "allenatore_avv": False,
+    "lambda_allenatore": 15.0,  # forza del ridge sugli effetti allenatore
 }
 
 
@@ -44,12 +47,14 @@ def _equilibrio_forza(p_t, p_o, p_x):
     return 1.0 - abs(p_t - p_o), p_t - p_o
 
 
-def prepara_righe(df, par=PARAMETRI):
+def prepara_righe(df, par=PARAMETRI, allenatori=None):
     """Trasforma il DataFrame delle partite (colonne di football_data + pH, pD, pA) in righe di squadra.
 
+    `allenatori` è una funzione (squadra, 'AAAA-MM-GG') -> nome dell'allenatore o None.
     Ritorna (righe, stato). `stato` contiene livello e falli aggiornati dopo l'ultima partita: serve
     per costruire le righe delle partite future.
     """
+    cerca = allenatori or (lambda sq, data: None)
     df = df.sort_values("data", kind="stable").reset_index(drop=True)
     decad = 0.5 ** (1.0 / par["emivita_livello"])
     num, den = 3.9 * 20, 20.0            # livello iniziale: 3.9 gialli a partita, pesato come 20 partite
@@ -69,6 +74,7 @@ def prepara_righe(df, par=PARAMETRI):
             eq, fo = _equilibrio_forza(p_t, p_o, r.pD) if quote else (np.nan, np.nan)
             righe.append({
                 "partita": i, "data": r.data, "stagione": r.stagione, "squadra": sq, "avversaria": op,
+                "allenatore": cerca(sq, str(r.data.date())), "allenatore_avv": cerca(op, str(r.data.date())),
                 "casa": casa, "y": y, "livello": livello,
                 "equilibrio": eq, "forza": fo,
                 "falli_f": np.log(falli_f.get(sq, lega_f) / lega_f),   # quanto la squadra commette falli
@@ -88,10 +94,11 @@ def prepara_righe(df, par=PARAMETRI):
     return pd.DataFrame(righe), stato
 
 
-def righe_future(casa, trasf, quote, stato, data, stagione):
+def righe_future(casa, trasf, quote, stato, data, stagione, allenatori=None):
     """Le due righe di squadra di una partita non ancora giocata. `quote` = (p1, pX, p2) o None."""
     out = []
     lf = stato["lega_f"]
+    cerca = allenatori or (lambda sq, d: None)
     for c in (1, 0):
         sq, op = (casa, trasf) if c else (trasf, casa)
         if quote is not None:
@@ -102,6 +109,7 @@ def righe_future(casa, trasf, quote, stato, data, stagione):
             eq, fo = np.nan, np.nan
         out.append({
             "partita": -1, "data": data, "stagione": stagione, "squadra": sq, "avversaria": op, "casa": c,
+            "allenatore": cerca(sq, str(data.date())), "allenatore_avv": cerca(op, str(data.date())),
             "y": np.nan, "livello": stato["livello"], "equilibrio": eq, "forza": fo,
             "falli_f": np.log(stato["falli_f"].get(sq, lf) / lf),
             "falli_s": np.log(stato["falli_s"].get(op, lf) / lf),
@@ -134,11 +142,21 @@ class ModelloPoisson:
                 att[k, self.indice[s]] = 1.0
             if o in self.indice:
                 dif[k, self.indice[o]] = 1.0
-        return np.hstack([denso, att, dif]), medie
+        blocchi = [denso, att, dif]
+        if self.par["usa_allenatore"]:
+            for col in ("allenatore", "allenatore_avv") if self.par["allenatore_avv"] else ("allenatore",):
+                m = np.zeros((len(righe), len(self.allenatori)))
+                for k, nome in enumerate(righe[col]):
+                    if nome in self.indice_all:
+                        m[k, self.indice_all[nome]] = 1.0
+                blocchi.append(m)
+        return np.hstack(blocchi), medie
 
     def fit(self, righe):
         self.squadre = sorted(set(righe["squadra"]) | set(righe["avversaria"]))
         self.indice = {s: i for i, s in enumerate(self.squadre)}
+        self.allenatori = sorted({n for n in set(righe["allenatore"]) | set(righe["allenatore_avv"]) if isinstance(n, str)})
+        self.indice_all = {n: i for i, n in enumerate(self.allenatori)}
         X, self.medie = self._matrice(righe)
         y = righe["y"].values.astype(float)
         off = np.log(righe["livello"].values)
@@ -147,6 +165,9 @@ class ModelloPoisson:
         n_denso = 1 + len(self.par["variabili"])
         pen = np.concatenate([np.full(n_denso, 1.0), np.full(2 * len(self.squadre), self.par["lambda_squadra"])])
         pen[0] = 1e-3
+        if self.par["usa_allenatore"]:
+            n_blocchi = 2 if self.par["allenatore_avv"] else 1
+            pen = np.concatenate([pen, np.full(n_blocchi * len(self.allenatori), self.par["lambda_allenatore"])])
         beta = np.zeros(X.shape[1])
         for _ in range(12):
             eta = X @ beta + off

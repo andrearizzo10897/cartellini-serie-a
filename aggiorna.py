@@ -15,9 +15,11 @@ warnings.filterwarnings("ignore")
 import pandas as pd  # noqa: E402
 
 import calcoli  # noqa: E402
+import presenza  # noqa: E402
 import config  # noqa: E402
 import pagina  # noqa: E402
-from fonti import aia, api_football, arbitri_espn, espn, football_data, kickest  # noqa: E402
+from fonti import (aia, api_football, arbitri_espn, espn, espn_dettaglio, football_data, kickest,  # noqa: E402
+                   transfermarkt)
 
 GIORNI_AVANTI = 8  # quanti giorni di calendario mostrare
 
@@ -64,6 +66,13 @@ def main():
     arbitri_api = pd.concat([arbitri_api, arbitri_espn.carica(fd, finite, anno, set(arbitri_api["arbitro"]))], ignore_index=True)
     arbitri_api = arbitri_api.drop_duplicates(["stagione", "casa", "trasf"], keep="first")
 
+    print("    dettaglio partite ESPN (minuto dei cambi e dei gialli) e Transfermarkt")
+    ids = set(arbitri_espn.id_partite(anno - 1)) | {ev["id"] for ev, _ in finite}
+    dettagli = espn_dettaglio.carica(sorted(ids))
+    tm = transfermarkt.carica(range(max(2022, anno - 4), anno))
+    if not len(tm):
+        stato.append("Transfermarkt non ha risposto: per i giocatori senza storico Kickest uso la media del ruolo.")
+
     print("5/5 Calcoli e pagina")
     ok, diversi = calcoli.controllo_espn(fd, finite, anno)
     print("    controllo gialli ESPN vs football-data: {} uguali, {} diversi".format(ok, diversi))
@@ -77,11 +86,13 @@ def main():
     lungo = calcoli.formato_lungo(df)
     giocatori_espn, ultima_formazione = calcoli.aggrega_espn(finite)
     poisson, stato_modello = calcoli.prepara_modello(df)
+    modello_presenza = presenza.ModelloPresenza(dettagli, stagione_corrente=anno)
     ctx = {
         "anno": anno, "df": df, "lungo": lungo, "tabelle": tabelle, "designazioni": designazioni,
         "aia_risolte": aia_risolte, "poisson": poisson, "stato_modello": stato_modello,
         "rapporto_var": 1.0,  # i gialli totali seguono una Poisson (backtest: la dispersione extra non migliora)
-        "profili": calcoli.ProfiliGiocatori(kick, giocatori_espn, anno),
+        "presenza": modello_presenza,
+        "profili": calcoli.ProfiliGiocatori(kick, tm, giocatori_espn, anno, modello_presenza),
     }
 
     partite = []
@@ -100,11 +111,12 @@ def main():
         "arbitri": calcoli.tabella_arbitri(df, anno),
         "squadre": calcoli.tabella_squadre(lungo, anno, squadre_stagione),
         "tipi": calcoli.tabella_tipi(df),
-        "lega": {"gialli": float(df["g_tot"].mean()), "partite": len(df),
+        "lega": {"gialli": float(df.tail(380)["g_tot"].mean()), "partite": len(df),
                  "rapporto_var": ctx["rapporto_var"],
-                 "over": {s: calcoli.frequenza_oltre(df["g_tot"], s) for s in calcoli.SOGLIE},
+                 "over": {s: calcoli.frequenza_oltre(df.tail(380)["g_tot"], s) for s in calcoli.SOGLIE},
                  "arbitri_noti": int(df["arbitro"].notna().sum())},
         "stato": stato,
+        "tempo": modello_presenza.riepilogo(),
         "aggiornato": config.adesso(),
         "partite_giocate": len(finite),
     }

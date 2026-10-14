@@ -7,12 +7,10 @@ GIORNI = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
 RUOLI = {"P": "Portiere", "D": "Difensore", "C": "Centrocampista", "A": "Attaccante"}
 
 CSS = """
-:root{color-scheme:light;--bg:#f6f6f4;--surf:#fcfcfb;--surf2:#f0efec;--ink:#0b0b0b;--ink2:#52514e;--ink3:#7c7b76;
---line:#e2e1dc;--bar:#2a78d6;--bar-bg:#e3ebf7;--accent:#2a78d6}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121211;--surf:#1a1a19;
---surf2:#232321;--ink:#f0efec;--ink2:#c3c2b7;--ink3:#97968c;--line:#33332f;--bar:#3987e5;--bar-bg:#24334a;--accent:#3987e5}}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#121211;--surf:#1a1a19;--surf2:#232321;--ink:#f0efec;--ink2:#c3c2b7;
---ink3:#97968c;--line:#33332f;--bar:#3987e5;--bar-bg:#24334a;--accent:#3987e5}
+:root{color-scheme:dark;--bg:#121211;--surf:#1a1a19;--surf2:#232321;--ink:#f0efec;--ink2:#c3c2b7;--ink3:#97968c;
+--line:#33332f;--bar:#3987e5;--bar-bg:#24334a;--accent:#3987e5;--alto:#f2994a;--medio:#e2c044}
+:root[data-theme="light"]{color-scheme:light;--bg:#f6f6f4;--surf:#fcfcfb;--surf2:#f0efec;--ink:#0b0b0b;--ink2:#52514e;
+--ink3:#7c7b76;--line:#e2e1dc;--bar:#2a78d6;--bar-bg:#e3ebf7;--accent:#2a78d6;--alto:#c25e00;--medio:#9a7400}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 padding:0 16px}
@@ -43,7 +41,38 @@ th:first-child,td:first-child{text-align:left}
 th{font-weight:600;color:var(--ink2);font-size:12px;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surf)}
 th[data-sort=asc]::after{content:" \\25B2";font-size:9px}th[data-sort=desc]::after{content:" \\25BC";font-size:9px}
 tr.sep td{background:var(--surf2);color:var(--ink2);font-size:12px;font-weight:600;cursor:default}
-.cols{display:grid;grid-template-columns:1fr;gap:12px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
+@media (min-width:1240px){.cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.cols .card{margin-bottom:0}
+.det{display:none}.det-on .det{display:table-cell}
+.opzioni{display:flex;justify-content:flex-end;margin:0 0 8px;font-size:13px;color:var(--ink2)}
+.opzioni label{cursor:pointer;display:flex;gap:6px;align-items:center}
+.testata h2{margin:0 0 2px;font-size:20px}
+.rischio{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0 4px}
+.rischio .r{background:var(--surf2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.rischio .r b{display:block;font-size:20px;line-height:1.2}.rischio .r span{font-size:12px;color:var(--ink2)}
+h3.titolo{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:16px 0 0}
+details.panchina{margin-top:10px;border-top:1px solid var(--line)}
+details.panchina>summary{padding:10px 0 6px;font-weight:600;color:var(--ink)}
+.bar.p-media i{background:var(--medio)}.bar.p-alta i{background:var(--alto)}
+.barcell .p-media b{color:var(--medio)}.barcell .p-alta b{color:var(--alto)}
+.barcell>span{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.q{font-size:11px;color:var(--ink3);font-weight:400}
+details.partita{background:var(--surf);border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
+details.partita>summary{list-style:none;cursor:pointer;padding:12px 14px 12px 36px;display:block;position:relative}
+details.partita>summary::-webkit-details-marker{display:none}
+details.partita>summary::before{content:"\\25B8";color:var(--ink3);position:absolute;left:14px;top:13px;transition:transform .15s}
+details.partita[open]>summary::before{transform:rotate(90deg)}
+details.partita[open]>summary{border-bottom:1px solid var(--line)}
+.s-riga1{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.s-squadre{font-size:16px;font-weight:700;color:var(--ink)}.s-quando{color:var(--ink2);font-size:13px}
+.s-riga2{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;font-size:13px;color:var(--ink2)}
+.s-riga2 b{color:var(--ink)}.s-riga2 b.p-media{color:var(--medio)}.s-riga2 b.p-alta{color:var(--alto)}
+.s-top{margin:4px 0 0;font-size:13px;color:var(--ink2)}.s-top b{color:var(--ink)}
+details.partita>.corpo{padding:12px 14px 14px}
+.riepilogo .riga{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:2px 0}
+.riepilogo .riga span{color:var(--ink2)}.riepilogo .riga b{color:var(--ink)}
+.riepilogo h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:0 0 6px}
 .barcell{display:flex;align-items:center;gap:8px;justify-content:flex-end;min-width:120px}
 .bar{flex:1;max-width:90px;height:8px;border-radius:4px;background:var(--bar-bg);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--bar);border-radius:4px}
@@ -129,8 +158,9 @@ function online(){
     else setTimeout(giro,8000)}).catch(function(){setTimeout(giro,8000)})};
   setTimeout(giro,10000)
  }).catch(function(e){ag.disabled=false;msg.textContent='Non riesco ad avviare l’aggiornamento ('+e.message+'). Si aggiorna comunque da solo ogni 20 minuti.'})}
+var dt=$('#det');if(dt){dt.addEventListener('change',function(){document.body.classList.toggle('det-on',dt.checked)})}
 var tm=$('#tema');if(tm){tm.addEventListener('click',function(){var d=document.documentElement,c=d.getAttribute('data-theme');
- var scuro=c?c==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;d.setAttribute('data-theme',scuro?'light':'dark')})}
+ d.setAttribute('data-theme',c==='light'?'dark':'light')})}
 })();
 """
 
@@ -143,10 +173,28 @@ def pct(x, d=0):
     return "–" if x is None else ("{:.%df}%%" % d).format(x * 100).replace(".", ",")
 
 
-def barra(valore, massimo, testo):
+def barra(valore, massimo, testo, livello=""):
     larghezza = 0 if not massimo else max(0, min(100, valore / massimo * 100))
-    return ('<div class="barcell"><span>{}</span><div class="bar"><i style="width:{:.0f}%"></i></div></div>'
-            .format(testo, larghezza))
+    return ('<div class="barcell"><span class="{l}">{t}</span><div class="bar {l}"><i style="width:{w:.0f}%"></i></div></div>'
+            .format(t=testo, w=larghezza, l=livello))
+
+
+def livello(prob, medio, alto):
+    """Fascia di colore di una probabilità: bassa, media o alta."""
+    return "p-alta" if prob >= alto else ("p-media" if prob >= medio else "p-bassa")
+
+
+def quota(prob):
+    """Quota minima conveniente: sopra questa quota la giocata ha valore (1 / probabilità stimata)."""
+    if prob <= 0.005:
+        return "q 200+"
+    q = 1.0 / prob
+    return "q " + (n(q, 1) if q >= 10 else n(q, 2))
+
+
+def con_quota(prob, decimali=0):
+    return "<b>{}</b><span class=\"q\" title=\"Conviene giocare solo se il bookmaker paga più di questa quota\">{}</span>".format(
+        pct(prob, decimali), quota(prob))
 
 
 def td(v, testo, extra=""):
@@ -166,14 +214,17 @@ def righe_giocatori(lista, panchina):
         celle = [
             '<td class="nome" data-v="{}">{}<span class="ruolo">{}</span>{}</td>'.format(
                 escape(p["nome"]), escape(p["nome"]), p["ruolo"], tag),
-            td(p["y90"], n(p["y90"], 2), ' class="nm"'), td(p["f90"], n(p["f90"], 1), ' class="nm"'), td(p["t90"], n(p["t90"], 1), ' class="nm"'),
+            td(p["y90"], n(p["y90"], 2), ' class="nm"'), td(p["f90"], n(p["f90"], 1), ' class="det"'), td(p["t90"], n(p["t90"], 1), ' class="det"'),
             td(p["gialli_stag"], n(p["gialli_stag"], 0) if p["presenze_stag"] else "–", ' class="nm"'),
         ]
+        if not panchina:
+            celle.append(td(p["p_esce"], pct(p["p_esce"]), ' class="nm"'))
         if panchina:
             celle.append(td(p["p_entra"], pct(p["p_entra"])))
             celle.append(td(p["p_se_entra"], pct(p["p_se_entra"], 1), ' class="nm"'))
         celle.append('<td data-v="{}"{}>{}</td>'.format(p["p_giallo"], alto,
-                                                         barra(p["p_giallo"], 0.5, "<b>{}</b>".format(pct(p["p_giallo"], 1)))))
+                                                         barra(p["p_giallo"], 0.5, con_quota(p["p_giallo"], 1),
+                                                               livello(p["p_giallo"], 0.08, 0.15))))
         out.append("<tr>" + "".join(celle) + "</tr>")
     return "".join(out)
 
@@ -181,25 +232,40 @@ def righe_giocatori(lista, panchina):
 def tabella_squadra(sq):
     t = ('<div class="card"><h3>{} <span class="muted">· gialli attesi {}</span>{}</h3><div class="scroll">'
          '<table class="ord"><thead><tr><th>Giocatore</th><th class="nm" title="Gialli ogni 90 minuti (pesati sulle ultime stagioni)">Gialli/90</th>'
-         '<th class="nm">Falli/90</th><th class="nm">Contrasti/90</th><th class="nm" title="Gialli presi in questa stagione">Gialli 26/27</th>'
+         '<th class="det">Falli/90</th><th class="det">Contrasti/90</th><th class="nm" title="Gialli presi in questa stagione">Gialli 26/27</th>'
+         '<th class="nm" title="Probabilità di essere sostituito prima della fine: meno minuti in campo, meno rischio">Sostituito</th>'
          '<th title="Probabilità di essere ammonito in questa partita">P(giallo)</th></tr></thead><tbody>'
          ).format(escape(sq["nome"]), n(sq["atteso"], 2),
                   ' <span class="small">· modulo {}</span>'.format(escape(sq["formazione"])) if sq["formazione"] else "")
-    t += "<tr class=\"sep\"><td colspan=\"6\">Titolari</td></tr>" + righe_giocatori(sq["titolari"], False)
+    t += "<tr class=\"sep\"><td colspan=\"7\">Titolari</td></tr>" + righe_giocatori(sq["titolari"], False)
     t += "</tbody></table></div>"
     if sq["panchina"]:
-        t += ('<div class="scroll" style="margin-top:10px"><table class="ord"><thead><tr><th>Panchina (possibili subentri)</th>'
-              '<th class="nm">Gialli/90</th><th class="nm">Falli/90</th><th class="nm">Contrasti/90</th><th class="nm">Gialli 26/27</th>'
+        t += ('<details class="panchina"><summary>Panchina · {} giocatori (probabilità di entrare e di essere ammoniti)</summary>'
+              '<div class="scroll"><table class="ord"><thead><tr><th>Giocatore</th>'
+              '<th class="nm">Gialli/90</th><th class="det">Falli/90</th><th class="det">Contrasti/90</th><th class="nm">Gialli 26/27</th>'
               '<th title="Probabilità di entrare, stimata da quante volte è entrato in stagione">P(entra)</th>'
               '<th class="nm" title="Probabilità di giallo se entra (circa 25 minuti)">Se entra</th>'
               '<th title="P(entra) x P(giallo se entra)">P(giallo)</th></tr></thead><tbody>')
-        t += righe_giocatori(sq["panchina"], True) + "</tbody></table></div>"
+        t += righe_giocatori(sq["panchina"], True) + "</tbody></table></div></details>"
+        t = t.replace("<summary>Panchina · {} giocatori", "<summary>Panchina · {} giocatori".format(len(sq["panchina"])), 1)
     return t + "</div>"
 
 
-def pannello_partita(i, p, attivo):
+def giocatori_partita(p):
+    """(probabilità, nome, squadra, in panchina) di tutti i giocatori della partita, dal più al meno a rischio."""
+    out = []
+    for sq in p["squadre"]:
+        for g in sq["titolari"]:
+            out.append((g["p_giallo"], g["nome"], sq["nome"], False))
+        for g in sq["panchina"]:
+            out.append((g["p_giallo"], g["nome"], sq["nome"], True))
+    return sorted(out, reverse=True)
+
+
+def scheda_partita(i, p):
     ev = p["ev"]
     info = p["info_arbitro"]
+    casa, trasf = escape(nome_squadra(ev["casa"])), escape(nome_squadra(ev["trasf"]))
     if p["arbitro"]:
         if info:
             arb = ('<div class="kpi"><span>Arbitro</span><b>{}</b><span>{} gialli/partita · {} rossi · {} partite · ultime 5: {}'
@@ -208,32 +274,69 @@ def pannello_partita(i, p, attivo):
         else:
             arb = ('<div class="kpi"><span>Arbitro</span><b>{}</b><span>Senza storico nei dati: nessun '
                    'aggiustamento sul modello</span></div>').format(escape(p["arbitro"]))
+        arb_breve = "Arbitro " + escape(p["arbitro"])
     else:
         arb = '<div class="kpi"><span>Arbitro</span><b>da designare</b><span>L\'AIA pubblica le designazioni a metà settimana</span></div>'
+        arb_breve = "arbitro da designare"
     badge = ('<span class="badge ok">Formazioni ufficiali</span>' if p["ufficiale"]
-             else '<span class="badge" title="Le ufficiali escono circa un\'ora prima del calcio d\'inizio">'
-                  'Formazione probabile: ultima schierata</span>')
+             else '<span class="badge" title="Le ufficiali escono circa un\'ora prima del calcio d\'inizio">Formazione probabile</span>')
     soglie = ""
+    over_breve = ""
     for s in p["soglie"]:
+        liv = livello(s["prob"], 0.35, 0.55)
         soglie += ("<tr><td>Oltre {}</td>{}<td>{}</td><td>{}</td><td>{}</td></tr>"
-                   ).format(n(s["soglia"], 1).replace(",", ","), td(s["prob"], barra(s["prob"], 1, "<b>{}</b>".format(pct(s["prob"])))),
+                   ).format(n(s["soglia"], 1), td(s["prob"], barra(s["prob"], 1, con_quota(s["prob"]), liv)),
                             pct(s["lega"]), pct(s["tipo"]), pct(s["arbitro"]))
-    return (
-        '<section data-match="m{i}" data-match-gruppo="match" class="{cls}">'
-        '<div class="card"><h2 style="margin-top:0">{casa} – {trasf}</h2><div class="muted">{quando} · {badge}</div>'
+        over_breve += '<span>Over {} <b class="{}">{}</b></span>'.format(n(s["soglia"], 1), liv, pct(s["prob"]))
+    candidati = giocatori_partita(p)
+    top3 = " · ".join("<b>{}</b> {}".format(escape(nome.split()[-1] if len(nome.split()) > 1 else nome), pct(pg))
+                      for pg, nome, sq, panc in candidati[:3])
+    rischio = ""
+    if candidati:
+        rischio = '<h3 class="titolo">Più a rischio di ammonizione</h3><div class="rischio">' + "".join(
+            '<div class="r"><b class="{}">{}</b><span>{} · {}{}</span></div>'.format(
+                livello(pg, 0.08, 0.15), pct(pg, 0), escape(nome), escape(sq), " · panchina" if panc else "")
+            for pg, nome, sq, panc in candidati[:6]) + "</div>"
+    riga1 = ('<div class="s-riga1"><span class="s-squadre">{c} – {t}</span><span class="s-quando">{q}</span>{b}</div>'
+             ).format(c=casa, t=trasf, q=quando(ev["inizio"]), b=badge)
+    riga2 = '<div class="s-riga2"><span><b>{}</b> gialli attesi</span>{}<span>{}</span></div>'.format(
+        n(p["atteso"]), over_breve, arb_breve)
+    riga3 = '<div class="s-top">Più a rischio: {}</div>'.format(top3) if top3 else ""
+    corpo = (
         '<div class="kpis">{arb}'
         '<div class="kpi"><span>Gialli attesi (totale)</span><b>{att}</b><span>{casa}: {ac} · {trasf}: {at}<br>senza arbitro e tipo: {base}</span></div>'
         '<div class="kpi"><span>Tipo di partita</span><b>{tipo}</b><span>effetto sul totale: {ft}</span></div></div>'
         '<div class="scroll"><table class="soglie"><thead><tr><th>Gialli totali</th><th>Stimata</th>'
         '<th>Serie A</th><th>Tipo</th><th>Arbitro</th></tr></thead><tbody>{soglie}</tbody></table></div>'
-        '<p class="legenda">La probabilità stimata combina le squadre (casa/trasferta, stagione, forma recente), l\'arbitro e il tipo di partita. '
-        'Le colonne \u00abSerie A\u00bb, \u00abTipo\u00bb e \u00abArbitro\u00bb sono frequenze reali nello storico (tutte le partite, quelle dello stesso tipo, quelle dello stesso arbitro), utili per confronto.</p></div>'
-        '<div class="cols">{t1}{t2}</div></section>'
-    ).format(i=i, cls="" if attivo else "hid", casa=escape(nome_squadra(ev["casa"])), trasf=escape(nome_squadra(ev["trasf"])),
-             quando=quando(ev["inizio"]), badge=badge, arb=arb, att=n(p["atteso"]),
-             ac=n(p["squadre"][0]["atteso"]), at=n(p["squadre"][1]["atteso"]), base=n(p["atteso_base"]),
-             tipo=escape(p["tipo"]), ft="{:+.0f}%".format((p["f_tipo"] - 1) * 100).replace("+0%", "nessuno").replace("-0%", "nessuno"),
-             soglie=soglie, t1=tabella_squadra(p["squadre"][0]), t2=tabella_squadra(p["squadre"][1]))
+        '{rischio}'
+        '<details><summary class="small">Come leggere le percentuali e le quote</summary><p class="legenda">La probabilità stimata combina le squadre, '
+        'le quote dei bookmaker, l\'arbitro e il tipo di partita. Sotto ogni percentuale c\'è la <b>quota minima conveniente</b> (1 diviso la '
+        'probabilità): conviene giocare solo se il bookmaker paga di più. I colori vanno dal grigio-blu (probabilità bassa) all\'arancio (alta). '
+        'Le colonne \u00abSerie A\u00bb, \u00abTipo\u00bb e \u00abArbitro\u00bb sono frequenze reali nello storico (ultime 380 partite, quelle dello stesso tipo, quelle dello stesso arbitro), utili per confronto.</p></details>'
+        '<div class="cols" style="margin-top:12px">{t1}{t2}</div>'
+    ).format(arb=arb, att=n(p["atteso"]), casa=casa, trasf=trasf, ac=n(p["squadre"][0]["atteso"]), at=n(p["squadre"][1]["atteso"]),
+             base=n(p["atteso_base"]), tipo=escape(p["tipo"]),
+             ft="{:+.0f}%".format((p["f_tipo"] - 1) * 100).replace("+0%", "nessuno").replace("-0%", "nessuno"),
+             soglie=soglie, rischio=rischio, t1=tabella_squadra(p["squadre"][0]), t2=tabella_squadra(p["squadre"][1]))
+    return '<details class="partita"><summary>{}{}{}</summary><div class="corpo">{}</div></details>'.format(riga1, riga2, riga3, corpo)
+
+
+def riepilogo_giornata(partite):
+    """Tre riquadri in cima: dove ci sono più gialli attesi, arbitri più severi, giocatori più a rischio."""
+    if not partite:
+        return ""
+    righe = lambda coppie: "".join('<div class="riga"><span>{}</span><b>{}</b></div>'.format(a, b) for a, b in coppie)
+    gialli = [("{} – {}".format(escape(nome_squadra(x["ev"]["casa"])), escape(nome_squadra(x["ev"]["trasf"]))), n(x["atteso"]))
+              for x in sorted(partite, key=lambda x: -x["atteso"])[:3]]
+    con_arbitro = sorted([x for x in partite if x["info_arbitro"] and x["info_arbitro"]["partite"] >= 10],
+                         key=lambda x: -x["info_arbitro"]["gialli"])[:3]
+    arbitri = [("{} · {} ({} partite)".format(escape(x["arbitro"]), escape(nome_squadra(x["ev"]["casa"])), x["info_arbitro"]["partite"]),
+                n(x["info_arbitro"]["gialli"])) for x in con_arbitro] or [("Designazioni non ancora uscite", "")]
+    tutti = sorted([(pg, nome, sq) for x in partite for pg, nome, sq, _ in giocatori_partita(x)], reverse=True)[:5]
+    giocatori = [("{} · {}".format(escape(nome), escape(sq)), pct(pg)) for pg, nome, sq in tutti]
+    return ('<div class="kpis riepilogo"><div class="kpi"><h3>Più gialli attesi</h3>{}</div>'
+            '<div class="kpi"><h3>Arbitri più severi (gialli/partita, almeno 10 partite)</h3>{}</div>'
+            '<div class="kpi"><h3>Giocatori più a rischio</h3>{}</div></div>').format(righe(gialli), righe(arbitri), righe(giocatori))
 
 
 # ---- Sezioni globali -------------------------------------------------------------------------
@@ -285,41 +388,90 @@ def sezione_tipi(righe):
             "Per il passato uso la classifica finale di quella stagione.</p>")
 
 
-def sezione_metodo(lega):
+def sezione_metodo(lega, tempo):
+    t = tempo
     return """
+<div class="card"><h3>In sintesi</h3>
+<p>Per ogni partita il programma risponde a tre domande, nell'ordine: <b>1)</b> quanti gialli prenderà ciascuna squadra;
+<b>2)</b> come si dividono tra i giocatori, tenendo conto di chi gioca, di chi viene sostituito e di chi entra dalla panchina;
+<b>3)</b> con che probabilità il totale supera 3,5, 4,5 o 5,5. Le percentuali sono stime statistiche, non certezze: un giallo è un
+evento raro e molto casuale, e nessun modello sa se un arbitro deciderà di fischiare o no.</p></div>
+
+<div class="card"><h3>1. Quanti gialli prenderà ogni squadra</h3><ul>
+<li><b>Livello della Serie A.</b> Si parte dalla media recente di gialli, calcolata in modo che le ultime giornate pesino di più. Conta
+perché i gialli sono calati ogni anno (4,3 a partita nel 2023/24, circa 3,5 oggi): usare lo storico intero farebbe sovrastimare.</li>
+<li><b>Correzione per squadra.</b> Una regressione di Poisson tiene conto di: quanti gialli prende di solito la squadra, quanti ne induce
+l'avversaria, il fattore campo, quanto la partita è equilibrata e chi è favorito secondo le quote dei bookmaker (le partite equilibrate hanno
+più gialli) e i falli che le due squadre commettono e subiscono. Le partite vecchie contano meno (la metà ogni 400 giorni) e le squadre con
+poche partite sono avvicinate alla media.</li>
+<li><b>Arbitro.</b> Si confronta la media di gialli dell'arbitro con quella della Serie A. Con poche partite l'effetto viene ridotto: con n
+partite pesa n/(n+15). Se l'arbitro non è ancora designato, il fattore è neutro.</li>
+<li><b>Tipo di partita</b> (derby, big match, scontro salvezza): stessa logica, ridotta con n/(n+30).</li>
+<li>Il totale atteso è la somma delle due squadre (ad esempio 1,8 + 2,1 = 3,9 gialli).</li></ul></div>
+
+<div class="card"><h3>2. Come si dividono tra i giocatori</h3><ul>
+<li><b>Gialli attesi del giocatore in una partita intera.</b> Dallo storico: Kickest (e Transfermarkt per chi Kickest non conosce) più la
+stagione in corso, con le stagioni pesate 1 / 0,8 / 0,5 / 0,3 (2026/27, 2025/26, 2024/25, 2023/24). Chi ha giocato poco viene avvicinato
+alla media del suo ruolo, equivalente a 10 partite: così non finisce a valori estremi.</li>
+<li><b>I minuti non valgono tutti uguale.</b> Nelle {partite} partite ESPN analizzate solo il <b>{primo:.0f}%</b> dei gialli arriva nei primi
+15 minuti e il <b>{ultimo:.0f}%</b> dal 75' in poi. Per questo il tempo in campo è misurato come quota di rischio, non in minuti.</li>
+<li><b>Titolari.</b> Si stima la probabilità di essere sostituiti, per giocatore e per ruolo: nei dati escono prima della fine circa il
+{p_p:.0f}% dei portieri, il {p_d:.0f}% dei difensori, il {p_c:.0f}% dei centrocampisti e il {p_a:.0f}% degli attaccanti, in media intorno
+al {uscita:.0f}'. Chi esce presto prende meno rischio: è la colonna <b>Sostituito</b>.</li>
+<li><b>Panchina.</b> <b>P(entra)</b> parte da quante volte il giocatore è entrato quando era in panchina, avvicinata alla media, e viene
+poi riportata al numero di cambi della squadra: in Serie A entrano in media <b>{cambi:.1f}</b> giocatori a partita (massimo 5), con
+differenze reali tra allenatori. Chi entra lo fa in media al <b>{ingresso:.0f}'</b> e si prende circa il <b>{rischio_sub:.0f}%</b> del
+rischio di una partita intera: è la colonna <b>Se entra</b>. Quindi P(giallo) del panchinaro = P(entra) × Se entra.</li>
+<li><b>Coerenza con la partita.</b> Un unico numero scala tutta la rosa in modo che la somma dei gialli dei giocatori coincida con il
+totale atteso per la squadra. L'ordine tra i giocatori non cambia.</li>
+<li><b>«nuovo»</b>: giocatore senza storico in Serie A. Si usa la media del ruolo, quindi la sua percentuale è poco informativa.</li></ul></div>
+
+<div class="card"><h3>3. Le soglie over</h3><ul>
+<li>Dal totale atteso si ricava con una distribuzione di Poisson la probabilità che i gialli siano più di 3,5, 4,5 o 5,5.</li>
+<li>Le colonne «Serie A», «Tipo» e «Arbitro» sono frequenze reali, utili per confronto: ultime 380 partite di Serie A, partite dello stesso
+tipo, partite dello stesso arbitro.</li></ul></div>
+
+<div class="card"><h3>Come leggere le colonne dei giocatori</h3><ul>
+<li><b>Gialli/90</b>, <b>Falli/90</b>, <b>Contrasti/90</b>: dati storici ogni 90 minuti giocati (falli e contrasti si vedono con
+«Mostra falli e contrasti»; i contrasti arrivano solo da Kickest, stagioni passate).</li>
+<li><b>Gialli 26/27</b>: gialli presi in questa stagione.</li>
+<li><b>Sostituito</b>: probabilità di essere sostituito prima della fine.</li>
+<li><b>P(entra)</b> e <b>Se entra</b> (solo panchina): vedi sopra.</li>
+<li><b>P(giallo)</b>: probabilità di essere ammonito in questa partita.</li></ul></div>
+
 <div class="card"><h3>Da dove arrivano i dati</h3><ul>
 <li><b>football-data.co.uk</b>: gialli, rossi, falli e quote 1X2 di ogni partita, dal 2023/24 (si aggiorna con qualche giorno di ritardo: le partite più recenti le ricavo da ESPN).</li>
-<li><b>ESPN</b>: calendario, formazioni ufficiali e panchina, gialli e falli per giocatore della stagione in corso, e le quote 1X2 delle partite ancora da giocare (se mancano, la partita è trattata come media).</li>
-<li><b>Kickest</b>: minuti, gialli, falli e contrasti per giocatore nelle stagioni 2023/24, 2024/25 e 2025/26 (la 2026/27 non è ancora pubblicata).</li>
-<li><b>API-Football (piano gratuito)</b>: arbitro di ogni partita del 2023/24 e 2024/25. Dal 2025/26 l'arbitro arriva dal dettaglio delle partite ESPN.</li>
-<li><b>AIA</b>: designazioni arbitrali della giornata. Il sito mostra solo l'ultima: le salvo a ogni aggiornamento, quindi lo storico arbitri 2026/27 cresce da solo.</li>
-</ul></div>
-<div class="card"><h3>Come calcolo le percentuali</h3><ul>
-<li><b>Gialli totali attesi</b>: per ogni squadra una regressione di Poisson che parte dal livello recente di gialli della Serie A (è sceso ogni anno: 4,3 nel 2023/24, 3,3 oggi) e lo corregge con: quanti gialli prende la squadra, quanti ne induce l'avversaria, il fattore campo, quanto la partita è equilibrata secondo le quote dei bookmaker, e i falli che le due squadre commettono e subiscono. Le partite vecchie pesano meno e le squadre con poche partite vengono avvicinate alla media. Poi moltiplico per un fattore arbitro e un fattore tipo di partita, entrambi "frenati" se i campioni sono piccoli.</li>
-<li><b>Soglie over</b>: dal totale atteso ricavo la probabilità con una distribuzione di Poisson. Le colonne "storico" sono frequenze reali per confronto.</li>
-<li><b>P(giallo) del giocatore</b> = 1 - e^(-gialli/90 × k × minuti/90). I gialli/90 pesano le stagioni (2026/27 ×1, 2025/26 ×0,8, 2024/25 ×0,5, 2023/24 ×0,3) e sono avvicinati alla media del ruolo con 900 minuti "virtuali", così chi ha giocato poco non finisce a valori estremi. Titolare = 85 minuti, subentrato = 25. Il numero k scala tutta la rosa in modo che la somma dei gialli attesi dei giocatori coincida con il totale atteso della squadra: così le percentuali dei singoli sono coerenti con quelle della partita.</li>
-<li><b>Quanto è affidabile</b>: ho rifatto ogni previsione di 2024/25, 2025/26 e 2026/27 usando solo i dati precedenti a quella partita (backtest, file <code>backtest.py</code>). Rispetto alla versione precedente l'errore sulle soglie over è sceso di circa il 6% senza arbitro e di circa il 10% con l'arbitro e la sovrastima sistematica dei gialli (+0,25 a partita) è sparita. Resta un evento molto casuale: nessuna percentuale è una certezza.</li>
-<li><b>Panchina</b>: P(entra) deriva da quante volte il giocatore è entrato dalla panchina in questa stagione; "se entra" assume circa 25 minuti.</li>
-</ul></div>
+<li><b>ESPN</b>: calendario, formazioni ufficiali e panchina, minuto di cambi e ammonizioni (2025/26 e 2026/27), arbitri dal 2025/26 e quote 1X2 delle partite ancora da giocare (se mancano, la partita è trattata come media).</li>
+<li><b>Kickest</b>: minuti, presenze, gialli, falli e contrasti per giocatore nel 2023/24, 2024/25 e 2025/26 (il 2026/27 non è ancora pubblicato).</li>
+<li><b>Transfermarkt</b>: presenze, convocazioni, entrate, uscite e gialli per giocatore dal 2022/23. È il ripiego quando Kickest non conosce un giocatore.</li>
+<li><b>API-Football (piano gratuito)</b>: arbitro di ogni partita del 2023/24 e 2024/25.</li>
+<li><b>AIA</b>: designazioni arbitrali della giornata. Il sito mostra solo l'ultima: le salvo a ogni aggiornamento.</li></ul></div>
+
+<div class="card"><h3>Quanto è affidabile</h3><ul>
+<li><b>Gialli di squadra.</b> Ho rifatto ogni previsione di 2024/25, 2025/26 e 2026/27 usando solo i dati precedenti a quella partita
+(<code>backtest.py</code>). Sull'errore delle soglie over (Brier, più basso è meglio): 0,193 con il metodo di partenza, 0,182 con
+questo modello e 0,173 aggiungendo l'arbitro (partite 2025/26 e 2026/27, mai usate per tarare). La sovrastima sistematica dei gialli
+(+0,27 a partita) è sparita.</li>
+<li><b>Giocatori.</b> Sulle 58 partite 2026/27 giocate, con previsioni fatte solo con i dati precedenti: la probabilità di entrare è
+molto più precisa (errore 0,545 contro 0,586) e per i panchinari la stima media è passata dall'1,7% al 2,3%, contro il 2,6% reale.
+Il campione è piccolo: sono indicazioni, non prove definitive.</li>
+<li><b>Provato e scartato</b> perché non migliorava i risultati: l'effetto dell'allenatore (né quello della squadra né quello di chi è appena
+arrivato), distribuzioni più complesse di Poisson e lo storico arbitri di Transfermarkt prima del 2023.</li></ul></div>
+
 <div class="card"><h3>Limiti da tenere presenti</h3><ul>
-<li>Sono stime statistiche, non previsioni certe: un giallo è un evento raro e molto casuale. Il modello non conosce squalifiche, diffide, tattiche, meteo o importanza della gara.</li>
-<li>Per l'arbitro ho tutte e tre le stagioni complete (2023/24, 2024/25 e 2025/26) e le partite 2026/27 già giocate. Per le partite future conta la designazione AIA: se non è ancora uscita, il fattore arbitro è neutro.</li>
-<li>I minuti della stagione in corso sono stimati (titolare = 90, o 68 se sostituito; subentrato = 25, o 15).</li>
-<li>I contrasti per giocatore arrivano solo da Kickest (stagioni passate): per questo la colonna è un dato storico, non della stagione in corso.</li>
-<li>Dati usati: {partite} partite storiche, {arb} con arbitro noto.</li>
-</ul></div>""".format(partite=lega["partite"], arb=lega["arbitri_noti"])
+<li>Il modello non conosce squalifiche, diffide, infortuni, tattiche, meteo o importanza della gara. Prima delle formazioni ufficiali (circa un'ora prima) si usa l'ultima formazione schierata: le percentuali dei giocatori sono provvisorie.</li>
+<li>Chi entra dalla panchina dipende da come va la partita: P(entra) è una media, non una previsione.</li>
+<li>I minuti della stagione in corso per i singoli giocatori sono stimati (titolare = 90, o 68 se sostituito; subentrato = 25, o 15).</li>
+<li>Dati usati: {partite_tot} partite storiche, {arb} con arbitro noto.</li></ul></div>""".format(
+        partite=t["partite"], primo=t["primo_quarto"] * 100, ultimo=t["ultimo_quarto"] * 100,
+        p_p=t["p_uscita"]["P"] * 100, p_d=t["p_uscita"]["D"] * 100, p_c=t["p_uscita"]["C"] * 100, p_a=t["p_uscita"]["A"] * 100,
+        uscita=sum(t["uscita_media"][r] for r in "DCA") / 3.0, cambi=t["cambi"], ingresso=t["ingresso_medio"],
+        rischio_sub=t["rischio_subentrato"] * 100, partite_tot=lega["partite"], arb=lega["arbitri_noti"])
 
 
 def genera(partite, sezioni, percorso):
     lega = sezioni["lega"]
-    chips, pannelli = "", ""
-    for i, p in enumerate(partite):
-        ev = p["ev"]
-        chips += ('<button class="chip" data-match="m{i}" data-match-gruppo="match" aria-selected="{sel}">{c} – {t}'
-                  '<small>{q}</small></button>').format(
-            i=i, sel="true" if i == 0 else "false", c=escape(nome_squadra(ev["casa"])), t=escape(nome_squadra(ev["trasf"])),
-            q=quando(ev["inizio"]))
-        pannelli += pannello_partita(i, p, i == 0)
+    pannelli = "".join(scheda_partita(i, p) for i, p in enumerate(partite))
     if not partite:
         pannelli = '<div class="card">Nessuna partita in programma nei prossimi giorni.</div>'
     note = "".join('<div class="note">{}</div>'.format(escape(s)) for s in sezioni["stato"])
@@ -327,19 +479,20 @@ def genera(partite, sezioni, percorso):
     nav = "".join('<button role="tab" data-tab="{k}" data-tab-gruppo="tab" aria-selected="{s}">{v}</button>'.format(
         k=k, v=v, s="true" if k == "partite" else "false") for k, v in tabs)
     corpo = {
-        "partite": '<div class="partite">{}</div>{}'.format(chips, pannelli),
+        "partite": (riepilogo_giornata(partite) + '<div class="opzioni"><label><input type="checkbox" id="det"> '
+                    'Mostra falli e contrasti</label></div>' + pannelli),
         "arbitri": "<h2>Arbitri: gialli e rossi a partita</h2>" + sezione_arbitri(sezioni["arbitri"], lega),
         "squadre": "<h2>Squadre: gialli fatti e subiti</h2>" + sezione_squadre(sezioni["squadre"]),
         "tipi": "<h2>Gialli per tipo di partita</h2>" + sezione_tipi(sezioni["tipi"]),
-        "metodo": sezione_metodo(lega),
+        "metodo": sezione_metodo(lega, sezioni["tempo"]),
     }
     sez = "".join('<div data-tab="{k}" data-tab-gruppo="tab" class="{c}">{h}</div>'.format(
         k=k, h=h, c="" if k == "partite" else "hid") for k, h in corpo.items())
     html = """<!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f6f6f4" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
-<title>Cartellini Serie A</title><style>{css}</style><noscript><style>.hid{{display:block!important}}nav.tabs,.partite,.az,#tema{{display:none!important}}section[data-match]{{margin-top:18px}}</style></noscript></head>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#121211">
+<title>Cartellini Serie A</title><style>{css}</style><noscript><style>.hid{{display:block!important}}nav.tabs,.az,#tema{{display:none!important}}</style></noscript></head>
 <body><div class="wrap">
-<header><div class="tit"><h1>Cartellini Serie A</h1><div class="muted">Stagione {anno}/{anno2} · Media Serie A: {media} gialli a partita ({over35} oltre 3,5 · {over45} oltre 4,5 · {over55} oltre 5,5)</div></div>
+<header><div class="tit"><h1>Cartellini Serie A</h1><div class="muted">Stagione {anno}/{anno2} · Media Serie A (ultime 380 partite): {media} gialli a partita ({over35} oltre 3,5 · {over45} oltre 4,5 · {over55} oltre 5,5)</div></div>
 <div class="small info">Aggiornato il {agg} · {fin} partite di quest'anno analizzate <button id="tema" class="tema" type="button">Tema chiaro/scuro</button></div><div class="az"><button id="agg" class="agg" type="button">Aggiorna</button><span id="msg"></span></div></header>
 <noscript><div class="note"><b>JavaScript disattivato</b> (succede nelle anteprime di Files, Drive o email): mostro tutte le partite e tutte le sezioni una sotto l'altra. Per avere schede e pulsante Aggiorna apri il file con Safari o Chrome.</div></noscript>{note}<nav class="tabs" role="tablist">{nav}</nav>{sez}
 </div><script>{js}</script></body></html>""".format(

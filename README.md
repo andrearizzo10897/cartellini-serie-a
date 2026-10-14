@@ -18,9 +18,10 @@ per ogni giocatore (titolari e panchina) delle prossime partite.
 - `aggiorna.py` – lo script principale
 - `calcoli.py` – statistiche e probabilità
 - `modello.py` – modello di Poisson dei gialli di squadra (quote, falli, livello di lega)
+- `presenza.py` – quanto e quando gioca ciascun giocatore: curva oraria dei gialli, sostituzioni, probabilità di entrare
 - `backtest.py` – verifica il modello sulle partite passate: `python3 backtest.py`
 - `pagina.py` – genera `index.html`
-- `fonti/` – un modulo per ogni sito (football-data, Kickest, ESPN, arbitri ESPN, AIA, API-Football)
+- `fonti/` – un modulo per ogni sito (football-data, Kickest, Transfermarkt, ESPN, dettagli e arbitri ESPN, AIA, API-Football, allenatori)
 - `dati/` – dati salvati (cache + `designazioni.json`, lo storico degli arbitri che cresce da solo)
 - `.env` – chiave API-Football (non condividerla fuori dalla cerchia di fiducia)
 
