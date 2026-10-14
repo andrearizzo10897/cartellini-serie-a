@@ -64,6 +64,8 @@ def squadre_stagione(anno):
             out.append((m.group(2), m.group(3), html.unescape(m.group(1))))
     if len(out) >= 18:   # una pagina strana non deve finire in cache
         scrivi_json(percorso, out)
+    else:
+        print("  ! Transfermarkt {}: elenco squadre non leggibile ({} trovate): pagina vuota o bloccata".format(anno, len(out)))
     return out
 
 
@@ -99,6 +101,8 @@ def giocatori_squadra(slug, id_squadra, nome_squadra, anno):
         })
     if len(righe) >= 10:   # una pagina vuota o bloccata non deve finire in cache
         scrivi_json(percorso, righe)
+    else:
+        print("  ! Transfermarkt {} {}: giocatori non leggibili ({} trovati)".format(nome_squadra, anno, len(righe)))
     return righe
 
 
