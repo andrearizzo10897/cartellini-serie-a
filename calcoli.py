@@ -4,6 +4,7 @@ import re
 
 import pandas as pd
 
+import modello
 from config import FORMA_BREVE, FORMA_LUNGA, MINUTI_PRIOR, PESO_STAGIONE
 from utils import e_derby, nome_squadra, senza_accenti
 
@@ -78,6 +79,8 @@ def integra_con_espn(fd, finite, anno):
             "g_c": somma("home", "gialli"), "g_t": somma("away", "gialli"),
             "r_c": somma("home", "rossi"), "r_t": somma("away", "rossi"),
             "f_c": somma("home", "falli"), "f_t": somma("away", "falli"),
+            "pH": (ev.get("quote") or (None,) * 3)[0], "pD": (ev.get("quote") or (None,) * 3)[1],
+            "pA": (ev.get("quote") or (None,) * 3)[2],
         })
     if not righe:
         return fd, 0
@@ -269,31 +272,18 @@ def fattore_tipo(df, tipo):
 # ---------------------------------------------------------------------------------------------
 # Gialli attesi in una partita
 # ---------------------------------------------------------------------------------------------
-def _attesa(lungo, sq, campo, colonna, anno, media_lega):
-    """Media attesa di una squadra in casa/trasferta: stagione corrente + storico + forma recente."""
-    t = lungo[lungo["squadra"] == sq]
-    storico = t[(t["stagione"] < anno) & (t["campo"] == campo)][colonna]
-    stagione = t[(t["stagione"] == anno) & (t["campo"] == campo)][colonna]
-    m_stor = storico.mean() if len(storico) >= 5 else media_lega
-    n = len(stagione)
-    base = (n * stagione.mean() + 8.0 * m_stor) / (n + 8.0) if n else m_stor
-    recenti = t.tail(FORMA_BREVE)[colonna]
-    riferimento = t.tail(35)[colonna].mean() if len(t) else None
-    if len(recenti) and riferimento:
-        r = recenti.mean() / riferimento if riferimento > 0 else 1.0
-        r = 1.0 + (r - 1.0) * len(recenti) / (len(recenti) + 5.0)
-        base *= 1.0 + 0.5 * (r - 1.0)
-    return float(base)
+def prepara_modello(df):
+    """Addestra il modello di Poisson (modello.py) su tutte le partite giocate."""
+    righe, stato = modello.prepara_righe(df)
+    return modello.ModelloPoisson().fit(righe), stato
 
 
-def gialli_attesi(lungo, casa, trasf, anno):
-    lega_c = lungo[lungo["campo"] == "casa"]["fatti"].mean()
-    lega_t = lungo[lungo["campo"] == "trasf"]["fatti"].mean()
-    e_casa = 0.5 * (_attesa(lungo, casa, "casa", "fatti", anno, lega_c)
-                    + _attesa(lungo, trasf, "trasf", "subiti", anno, lega_c))
-    e_trasf = 0.5 * (_attesa(lungo, trasf, "trasf", "fatti", anno, lega_t)
-                     + _attesa(lungo, casa, "casa", "subiti", anno, lega_t))
-    return e_casa, e_trasf, float(lega_c), float(lega_t)
+def gialli_attesi(ctx, ev):
+    """Gialli attesi (casa, trasferta) dal modello di Poisson, con le quote 1X2 se ESPN le fornisce."""
+    righe = modello.righe_future(ev["casa"], ev["trasf"], ev.get("quote"), ctx["stato_modello"],
+                                 pd.Timestamp(ev["inizio"].date()), ctx["anno"])
+    mu = ctx["poisson"].atteso(righe)
+    return float(mu[0]), float(mu[1])
 
 
 # ---------------------------------------------------------------------------------------------
@@ -411,24 +401,36 @@ def prob_giallo(y90, minuti, fattore):
     return 1.0 - math.exp(-y90 * fattore * minuti / 90.0)
 
 
+def fattore_riconciliazione(titolari, panchina, atteso_squadra):
+    """Quanto scalare le frequenze di giallo dei giocatori perché la loro somma torni al totale della squadra.
+
+    Il totale di squadra è la parte più solida del modello (verificata con il backtest): i gialli/90 dei
+    giocatori, invece, vengono da stagioni con più gialli di oggi e già contengono la propensione della
+    squadra. Si scala quindi tutta la rosa con lo stesso numero, senza cambiare l'ordine tra i giocatori.
+    """
+    atteso_giocatori = sum(g["y90"] * g["minuti"] / 90.0 for g in titolari)
+    atteso_giocatori += sum(g["p_entra"] * g["y90"] * g["minuti"] / 90.0 for g in panchina)
+    if atteso_giocatori <= 0:
+        return 1.0
+    return max(0.4, min(2.0, atteso_squadra / atteso_giocatori))
+
+
 # ---------------------------------------------------------------------------------------------
 # Una partita completa
 # ---------------------------------------------------------------------------------------------
 def analizza_partita(ev, forma, e_ufficiale, ctx):
     anno = ctx["anno"]
     casa, trasf = ev["casa"], ev["trasf"]
-    df, lungo = ctx["df"], ctx["lungo"]
+    df = ctx["df"]
     arbitro_aia = ctx["designazioni"].get((anno, casa, trasf))
     arbitro = ctx["aia_risolte"].get((anno, casa, trasf))
     f_arb, info_arb = fattore_arbitro(df, arbitro)
     tipo = tipo_partita(casa, trasf, anno, ctx["tabelle"], anno)
     f_tipo = fattore_tipo(df, tipo)
-    e_c, e_t, lega_c, lega_t = gialli_attesi(lungo, casa, trasf, anno)
+    e_c, e_t = gialli_attesi(ctx, ev)
     fattore = f_arb * f_tipo
     totale = (e_c + e_t) * fattore
     soglie = []
-    storico_coppia = pd.concat([lungo[(lungo["squadra"] == casa) & (lungo["campo"] == "casa")],
-                                lungo[(lungo["squadra"] == trasf) & (lungo["campo"] == "trasf")]])
     for s in SOGLIE:
         soglie.append({
             "soglia": s, "prob": prob_oltre(totale, ctx["rapporto_var"], s),
@@ -437,27 +439,29 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
             "arbitro": info_arb["over" + str(int(s * 10))] if info_arb else None,
         })
     squadre = []
-    for lato, sq, e_sq, lega_sq in (("home", casa, e_c, lega_c), ("away", trasf, e_t, lega_t)):
-        f_sq = ((e_sq * fattore) / lega_sq) ** 0.5
-        k = max(0.3, min(1.8, f_arb * f_tipo * f_sq))
+    for lato, sq, e_sq in (("home", casa, e_c), ("away", trasf, e_t)):
+        atteso_sq = e_sq * fattore
         f = forma.get(lato) if forma else None
         titolari, panchina = [], []
         for g in (f["giocatori"] if f else []):
             p = ctx["profili"].profilo(g["id"], g["nome"], sq, g["ruolo_espn"])
             if g["titolare"]:
                 p["minuti"] = MINUTI_TITOLARE if p["ruolo"] != "P" else 90
-                p["p_giallo"] = prob_giallo(p["y90"], p["minuti"], k)
                 titolari.append(p)
             else:
                 p["minuti"] = MINUTI_SUBENTRO
-                p["p_se_entra"] = prob_giallo(p["y90"], MINUTI_SUBENTRO, k)
-                p["p_giallo"] = p["p_entra"] * p["p_se_entra"]
                 panchina.append(p)
+        k = fattore_riconciliazione(titolari, panchina, atteso_sq)
+        for p in titolari:
+            p["p_giallo"] = prob_giallo(p["y90"], p["minuti"], k)
+        for p in panchina:
+            p["p_se_entra"] = prob_giallo(p["y90"], MINUTI_SUBENTRO, k)
+            p["p_giallo"] = p["p_entra"] * p["p_se_entra"]
         ordine = {"P": 0, "D": 1, "C": 2, "A": 3}
         titolari.sort(key=lambda p: (ordine.get(p["ruolo"], 9), -p["p_giallo"]))
         panchina.sort(key=lambda p: -p["p_giallo"])
         squadre.append({"nome": nome_squadra(sq), "lato": lato, "formazione": f["formazione"] if f else None,
-                        "atteso": e_sq * fattore, "titolari": titolari, "panchina": panchina})
+                        "atteso": atteso_sq, "titolari": titolari, "panchina": panchina})
     return {"ev": ev, "ufficiale": e_ufficiale, "arbitro": arbitro, "arbitro_aia": arbitro_aia,
             "info_arbitro": info_arb, "f_arb": f_arb, "tipo": tipo, "f_tipo": f_tipo,
             "atteso": totale, "atteso_base": e_c + e_t, "soglie": soglie, "squadre": squadre}

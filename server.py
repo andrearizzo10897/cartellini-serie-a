@@ -6,6 +6,7 @@ Uso:  python3 server.py            (solo da questo computer)
 Il pulsante "Aggiorna" della pagina lancia aggiorna.py e ricarica la pagina.
 """
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -16,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import config
 
-PORTA = 8765
+PORTA = int(os.environ.get("PORTA_CARTELLINI", 8766))
 _blocco = threading.Lock()
 
 

@@ -12,10 +12,12 @@ from datetime import date, datetime, timedelta
 
 warnings.filterwarnings("ignore")
 
+import pandas as pd  # noqa: E402
+
 import calcoli  # noqa: E402
 import config  # noqa: E402
 import pagina  # noqa: E402
-from fonti import aia, api_football, espn, football_data, kickest  # noqa: E402
+from fonti import aia, api_football, arbitri_espn, espn, football_data, kickest  # noqa: E402
 
 GIORNI_AVANTI = 8  # quanti giorni di calendario mostrare
 
@@ -28,7 +30,7 @@ def main():
     print("1/5 Risultati e cartellini di squadra (football-data.co.uk)")
     fd = football_data.carica()
 
-    print("2/5 Arbitri (API-Football per il 2023-2024, AIA per le designazioni)")
+    print("2/5 Arbitri (API-Football per il 2023-2024, ESPN dal 2025-2026, AIA per le designazioni)")
     arbitri_api = api_football.carica(config.STAGIONI_STORICO)
     archivio = aia.aggiorna()
     designazioni = aia.designazioni(archivio)
@@ -58,6 +60,10 @@ def main():
                 prossime.append(ev)
     prossime.sort(key=lambda e: e["inizio"])
 
+    # arbitri delle stagioni che API-Football non copre: dal dettaglio delle partite ESPN
+    arbitri_api = pd.concat([arbitri_api, arbitri_espn.carica(fd, finite, anno, set(arbitri_api["arbitro"]))], ignore_index=True)
+    arbitri_api = arbitri_api.drop_duplicates(["stagione", "casa", "trasf"], keep="first")
+
     print("5/5 Calcoli e pagina")
     ok, diversi = calcoli.controllo_espn(fd, finite, anno)
     print("    controllo gialli ESPN vs football-data: {} uguali, {} diversi".format(ok, diversi))
@@ -70,10 +76,11 @@ def main():
     df = calcoli.aggiungi_tipo(df, tabelle, anno)
     lungo = calcoli.formato_lungo(df)
     giocatori_espn, ultima_formazione = calcoli.aggrega_espn(finite)
-    var = df["g_tot"].var() / df["g_tot"].mean()
+    poisson, stato_modello = calcoli.prepara_modello(df)
     ctx = {
         "anno": anno, "df": df, "lungo": lungo, "tabelle": tabelle, "designazioni": designazioni,
-        "aia_risolte": aia_risolte, "rapporto_var": max(1.0, min(2.0, var)),
+        "aia_risolte": aia_risolte, "poisson": poisson, "stato_modello": stato_modello,
+        "rapporto_var": 1.0,  # i gialli totali seguono una Poisson (backtest: la dispersione extra non migliora)
         "profili": calcoli.ProfiliGiocatori(kick, giocatori_espn, anno),
     }
 

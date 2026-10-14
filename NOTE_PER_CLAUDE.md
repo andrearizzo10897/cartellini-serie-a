@@ -10,15 +10,20 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
 
 ## Decisioni e limiti già emersi
 - Il piano gratuito di API-Football non dà la stagione in corso: serve solo per l'arbitro del 2023-2024.
-- Arbitro 2025/26 non disponibile gratis. L'AIA mostra solo l'ultima giornata: `dati/designazioni.json` la accumula.
+- Arbitri: 2023/24 e 2024/25 da API-Football; dal 2025/26 da ESPN (`fonti/arbitri_espn.py`, campo gameInfo.officials, cache compatta in dati/cache/arbitri_espn.json). L'AIA mostra solo l'ultima giornata: `dati/designazioni.json` la accumula per le partite future.
+- Backtest del fattore arbitro (k=15) su 2025/26-2026/27: Brier 0,1817 -> 0,1731.
 - Contrasti per giocatore solo da Kickest (stagioni passate). Minuti 2026/27 stimati da ESPN.
-- Probabilità di giallo = 1 - exp(-gialli/90 x fattori x minuti/90), con riduzione verso la media del ruolo.
-- Il modello non è stato calibrato su risultati reali: andrebbe fatto un backtest.
+- Gialli di squadra: regressione di Poisson con ridge in `modello.py` (livello di lega adattivo, effetti squadra, casa, quote 1X2 e falli), x fattore arbitro x fattore tipo di partita.
+- Probabilità di giallo del giocatore = 1 - exp(-gialli/90 x k x minuti/90), con riduzione verso la media del ruolo; k è scelto in modo che la somma dei giocatori coincida col totale della squadra (`fattore_riconciliazione`).
+- Backtest walk-forward in `backtest.py` (python3 backtest.py, ~1 minuto): il modello del 14/10/2026 ha Brier 0,181 contro 0,193 del precedente su 2025/26-2026/27 (mai usate per tarare), bias +0,01 contro +0,27.
+- Verificato e scartato: binomiale negativa/Conway-Maxwell (nessun guadagno stabile), altri parametri (la superficie è piatta: non ritoccarli senza un backtest).
+- Le quote future vengono dallo scoreboard ESPN (DraftKings), che le toglie a partita finita; lo storico usa la media dei bookmaker di football-data. Se mancano la partita è trattata come media.
+- Non verificabile col backtest: i giocatori prima del 2026/27 (Kickest dà solo totali di stagione). La riconciliazione è stata controllata sulle 60 partite ESPN 2026/27.
 - Utente: usa un Mac vecchio al lavoro e un PC Windows con Anaconda a casa. Vuole l'aggiornamento anche da telefono.
 
 ## Da fare (idee)
 - Pubblicare con GitHub Actions + Pages (workflow già in `.github/workflows/aggiorna.yml`, serve il secret APIFOOTBALL_KEY).
-- Backtest del modello; eventuale aggiunta di altri campionati.
+- Eventuale aggiunta di altri campionati. Rifare `python3 backtest.py` dopo ogni modifica al modello e tenerla solo se Brier e log-verosimiglianza migliorano.
 
 ## Versione online (attiva dal 12/10/2026)
 - Repository pubblico: https://github.com/andrearizzo10897/cartellini-serie-a

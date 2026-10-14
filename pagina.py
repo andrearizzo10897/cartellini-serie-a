@@ -288,21 +288,22 @@ def sezione_tipi(righe):
 def sezione_metodo(lega):
     return """
 <div class="card"><h3>Da dove arrivano i dati</h3><ul>
-<li><b>football-data.co.uk</b>: gialli, rossi e falli di squadra, partita per partita, dal 2023/24 (si aggiorna con qualche giorno di ritardo: le partite più recenti le ricavo da ESPN).</li>
-<li><b>ESPN</b>: calendario, formazioni ufficiali e panchina, gialli e falli per giocatore della stagione in corso.</li>
+<li><b>football-data.co.uk</b>: gialli, rossi, falli e quote 1X2 di ogni partita, dal 2023/24 (si aggiorna con qualche giorno di ritardo: le partite più recenti le ricavo da ESPN).</li>
+<li><b>ESPN</b>: calendario, formazioni ufficiali e panchina, gialli e falli per giocatore della stagione in corso, e le quote 1X2 delle partite ancora da giocare (se mancano, la partita è trattata come media).</li>
 <li><b>Kickest</b>: minuti, gialli, falli e contrasti per giocatore nelle stagioni 2023/24, 2024/25 e 2025/26 (la 2026/27 non è ancora pubblicata).</li>
-<li><b>API-Football (piano gratuito)</b>: arbitro di ogni partita del 2023/24 e 2024/25.</li>
+<li><b>API-Football (piano gratuito)</b>: arbitro di ogni partita del 2023/24 e 2024/25. Dal 2025/26 l'arbitro arriva dal dettaglio delle partite ESPN.</li>
 <li><b>AIA</b>: designazioni arbitrali della giornata. Il sito mostra solo l'ultima: le salvo a ogni aggiornamento, quindi lo storico arbitri 2026/27 cresce da solo.</li>
 </ul></div>
 <div class="card"><h3>Come calcolo le percentuali</h3><ul>
-<li><b>Gialli totali attesi</b>: media tra i gialli che la squadra di casa prende in casa e quelli che gli avversari prendono in trasferta (e viceversa), mescolando storico, stagione corrente e ultime 5 partite; poi moltiplico per un fattore arbitro e un fattore tipo di partita, entrambi "frenati" se i campioni sono piccoli.</li>
-<li><b>Soglie over</b>: dal totale atteso ricavo la probabilità con una distribuzione di conteggio (Poisson/binomiale negativa). Le colonne "storico" sono frequenze reali per confronto.</li>
-<li><b>P(giallo) del giocatore</b> = 1 - e^(-gialli/90 × fattori × minuti/90). I gialli/90 pesano le stagioni (2026/27 ×1, 2025/26 ×0,8, 2024/25 ×0,5, 2023/24 ×0,3) e sono avvicinati alla media del ruolo con 900 minuti "virtuali", così chi ha giocato poco non finisce a valori estremi. Titolare = 85 minuti, subentrato = 25.</li>
+<li><b>Gialli totali attesi</b>: per ogni squadra una regressione di Poisson che parte dal livello recente di gialli della Serie A (è sceso ogni anno: 4,3 nel 2023/24, 3,3 oggi) e lo corregge con: quanti gialli prende la squadra, quanti ne induce l'avversaria, il fattore campo, quanto la partita è equilibrata secondo le quote dei bookmaker, e i falli che le due squadre commettono e subiscono. Le partite vecchie pesano meno e le squadre con poche partite vengono avvicinate alla media. Poi moltiplico per un fattore arbitro e un fattore tipo di partita, entrambi "frenati" se i campioni sono piccoli.</li>
+<li><b>Soglie over</b>: dal totale atteso ricavo la probabilità con una distribuzione di Poisson. Le colonne "storico" sono frequenze reali per confronto.</li>
+<li><b>P(giallo) del giocatore</b> = 1 - e^(-gialli/90 × k × minuti/90). I gialli/90 pesano le stagioni (2026/27 ×1, 2025/26 ×0,8, 2024/25 ×0,5, 2023/24 ×0,3) e sono avvicinati alla media del ruolo con 900 minuti "virtuali", così chi ha giocato poco non finisce a valori estremi. Titolare = 85 minuti, subentrato = 25. Il numero k scala tutta la rosa in modo che la somma dei gialli attesi dei giocatori coincida con il totale atteso della squadra: così le percentuali dei singoli sono coerenti con quelle della partita.</li>
+<li><b>Quanto è affidabile</b>: ho rifatto ogni previsione di 2024/25, 2025/26 e 2026/27 usando solo i dati precedenti a quella partita (backtest, file <code>backtest.py</code>). Rispetto alla versione precedente l'errore sulle soglie over è sceso di circa il 6% senza arbitro e di circa il 10% con l'arbitro e la sovrastima sistematica dei gialli (+0,25 a partita) è sparita. Resta un evento molto casuale: nessuna percentuale è una certezza.</li>
 <li><b>Panchina</b>: P(entra) deriva da quante volte il giocatore è entrato dalla panchina in questa stagione; "se entra" assume circa 25 minuti.</li>
 </ul></div>
 <div class="card"><h3>Limiti da tenere presenti</h3><ul>
 <li>Sono stime statistiche, non previsioni certe: un giallo è un evento raro e molto casuale. Il modello non conosce squalifiche, diffide, tattiche, meteo o importanza della gara.</li>
-<li>Per l'arbitro ho lo storico di 2023/24 e 2024/25 (API-Football) e delle designazioni salvate dal 2026/27: la stagione 2025/26 manca perché nessuna fonte gratuita la fornisce.</li>
+<li>Per l'arbitro ho tutte e tre le stagioni complete (2023/24, 2024/25 e 2025/26) e le partite 2026/27 già giocate. Per le partite future conta la designazione AIA: se non è ancora uscita, il fattore arbitro è neutro.</li>
 <li>I minuti della stagione in corso sono stimati (titolare = 90, o 68 se sostituito; subentrato = 25, o 15).</li>
 <li>I contrasti per giocatore arrivano solo da Kickest (stagioni passate): per questo la colonna è un dato storico, non della stagione in corso.</li>
 <li>Dati usati: {partite} partite storiche, {arb} con arbitro noto.</li>
