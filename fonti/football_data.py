@@ -30,7 +30,14 @@ def carica():
                     continue
         df = pd.read_csv(io.StringIO(percorso.read_text(encoding="utf-8").lstrip("﻿")))
         df = df.dropna(subset=["HomeTeam", "AwayTeam", "HY", "AY"])
+        # quote 1X2: media dei bookmaker, altrimenti Bet365; poi tolgo il margine -> probabilità
+        q = {}
+        for lato in "HDA":
+            q[lato] = df["Avg" + lato].fillna(df["B365" + lato])
+        inv = pd.DataFrame({k: 1.0 / v for k, v in q.items()})
+        prob = inv.div(inv.sum(axis=1), axis=0)
         out = pd.DataFrame({
+            "pH": prob["H"], "pD": prob["D"], "pA": prob["A"],
             "stagione": anno,
             "data": pd.to_datetime(df["Date"], dayfirst=True),
             "casa": df["HomeTeam"].map(squadra),

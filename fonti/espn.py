@@ -7,6 +7,7 @@ from datetime import datetime
 
 from dateutil import tz
 
+import modello
 from config import CACHE
 from utils import fresca, leggi_json, scarica, scrivi_json, squadra
 
@@ -17,6 +18,22 @@ ROMA = tz.gettz("Europe/Rome")
 def _ora_locale(iso):
     dt = datetime.strptime(iso, "%Y-%m-%dT%H:%MZ").replace(tzinfo=tz.UTC)
     return dt.astimezone(ROMA).replace(tzinfo=None)
+
+
+def _quote(odds):
+    """Quote 1X2 (moneyline) di chiusura, o di apertura, -> (p1, pX, p2) senza margine. None se non ci sono.
+
+    ESPN le toglie a partita finita: ci sono solo per quelle ancora da giocare.
+    """
+    for o in odds or []:
+        ml = (o or {}).get("moneyline")
+        for fase in ("close", "open"):
+            try:
+                q = [float(ml[x][fase]["odds"]) for x in ("home", "draw", "away")]
+                return tuple(float(p) for p in modello.probabilita_da_moneyline(*q))
+            except (TypeError, KeyError, ValueError):
+                continue
+    return None
 
 
 def partite_del_giorno(giorno):
@@ -43,6 +60,7 @@ def partite_del_giorno(giorno):
             "trasf": squadra(trasf["team"]["displayName"]),
             "stato": e["status"]["type"]["state"],  # pre / in / post
             "gol_c": casa.get("score"), "gol_t": trasf.get("score"),
+            "quote": _quote(e["competitions"][0].get("odds")),
         })
     return out
 
