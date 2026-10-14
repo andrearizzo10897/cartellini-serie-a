@@ -7,27 +7,16 @@ quindi dopo la prima esecuzione (circa 480 richieste) si scaricano solo le parti
 import pandas as pd
 
 from config import CACHE
-from fonti import espn
-from fonti.api_football import STAGIONI_GRATIS, _breve
-from utils import leggi_json, scarica, scrivi_json
+from fonti import espn, espn_dettaglio
+from fonti.api_football import STAGIONI_GRATIS
+from utils import leggi_json, scrivi_json
 
 ARCHIVIO = CACHE / "arbitri_espn.json"
 
 
-def _arbitro_da_summary(js):
-    ufficiali = (js.get("gameInfo") or {}).get("officials") or []
-    if not ufficiali:
-        return None
-    primo = next((o for o in ufficiali if o.get("order") == 1), ufficiali[0])
-    return _breve((primo.get("fullName") or primo.get("displayName") or "").strip()) or None
-
-
 def _arbitro_partita(id_partita):
-    """Arbitro di una partita finita: dalla cache completa di ESPN se c'è, altrimenti dalla rete."""
-    completa = CACHE / "espn" / "partita_{}.json".format(id_partita)
-    if completa.exists():
-        return _arbitro_da_summary(leggi_json(completa))
-    return _arbitro_da_summary(scarica(espn.BASE + "/summary", params={"event": id_partita}).json())
+    """Arbitro di una partita finita (stesso scaricamento dei dettagli: ESPN si interroga una volta sola)."""
+    return espn_dettaglio.dettaglio(id_partita).get("arbitro")
 
 
 def _allinea(nome, noti):
@@ -69,10 +58,18 @@ def carica(fd, finite, anno_corrente, noti=()):
         nuovi += 1
         if nuovi % 40 == 0:
             scrivi_json(ARCHIVIO, archivio)
+            espn_dettaglio.salva()
             print("    arbitri ESPN scaricati: {}".format(nuovi), flush=True)
     if nuovi:
         scrivi_json(ARCHIVIO, archivio)
+        espn_dettaglio.salva()
     noti = set(noti)
     righe = [{"stagione": s, "casa": c, "trasf": t, "arbitro": _allinea(a, noti)}
              for s, c, t, a in archivio.values() if a]
     return pd.DataFrame(righe, columns=["stagione", "casa", "trasf", "arbitro"])
+
+
+def id_partite(da_stagione):
+    """Id ESPN delle partite finite già note dall'archivio, dalla stagione indicata in poi."""
+    archivio = leggi_json(ARCHIVIO) if ARCHIVIO.exists() else {}
+    return [k for k, v in archivio.items() if v[0] >= da_stagione]
