@@ -64,7 +64,7 @@ def _interpreta(pagina):
                 "casa": squadra(m.group(1)), "trasf": squadra(m.group(2)),
                 "data": date(anno, mese, giorno).isoformat(),
                 "ora": "{}:{}".format(o.group(1).zfill(2), o.group(2)) if o else "",
-                "arbitro": arbitro.strip(),
+                "arbitro": re.sub(r"\s*\(.*$", "", arbitro).strip(),   # toglie la sezione tra parentesi: "MASSA (Imperia)" -> "MASSA"
             })
         i = k + 1
     return {"titolo": titolo, "pubblicata": pub.isoformat(), "partite": partite}
