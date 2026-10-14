@@ -46,18 +46,18 @@ def frequenza_oltre(serie, soglia):
 # ---------------------------------------------------------------------------------------------
 def risolvi_arbitro(nome_aia, noti):
     """L'AIA scrive "ROSSI C." o "DI BELLO": cerco il nome completo nello storico di API-Football."""
-    testo = nome_aia.strip()
+    testo = re.sub(r"\s*\(.*$", "", nome_aia.strip()).strip()   # "MASSA (Imperia)" o "MASSA (" -> "MASSA"
     iniziale = ""
-    m = re.match(r"^(.*?)\s+([A-Z])\.$", testo)
+    m = re.match(r"^(.*?)\s+((?:[A-Z]\.)+)$", testo)            # "ROSSI C." o "SACCHI J.L." -> prima iniziale
     if m:
-        testo, iniziale = m.group(1), m.group(2).lower()
+        testo, iniziale = m.group(1), m.group(2)[0].lower()
     cognome = senza_accenti(testo).lower()
     candidati = [pieno for norm, pieno in noti.items() if norm == cognome or norm.endswith(" " + cognome)]
     if iniziale:
         candidati = [c for c in candidati if senza_accenti(c).lower().startswith(iniziale)] or candidati
     if candidati:
         return candidati[0]
-    return nome_aia.title()
+    return testo.title()
 
 
 def integra_con_espn(fd, finite, anno):
