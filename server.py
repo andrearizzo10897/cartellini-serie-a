@@ -82,8 +82,20 @@ def _ip_locale():
         return "IP-del-computer"
 
 
+def _quote_in_background():
+    """Finché la finestra è aperta, ogni 30 minuti scarica le quote DAZN Bet e le pubblica per la pagina online."""
+    while True:
+        time.sleep(1800)
+        try:
+            subprocess.run([sys.executable, str(config.BASE / "pubblica_quote.py")], cwd=str(config.BASE),
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=300)
+        except (subprocess.SubprocessError, OSError):
+            pass
+
+
 def main():
     rete = "--rete" in sys.argv
+    threading.Thread(target=_quote_in_background, daemon=True).start()
     # se la pagina è vecchia (più di 30 minuti) la aggiorno subito
     if not config.OUTPUT.exists() or time.time() - config.OUTPUT.stat().st_mtime > 1800:
         print("Aggiorno i dati prima di partire (può servire un minuto)...")

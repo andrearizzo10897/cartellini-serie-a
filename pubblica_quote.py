@@ -3,7 +3,9 @@
 
 I server di GitHub non riescono a leggere il sito di DAZN Bet, quindi le scarica questo PC e le salva in
 quote_daznbet.json; il workflow online le legge da lì al prossimo aggiornamento (entro 20 minuti).
-Uso:  python pubblica_quote.py        (da lanciare ogni tanto, o a intervalli con l'Utilità di pianificazione)
+Di solito non serve lanciarlo a mano: lo fanno aggiorna.py (a ogni aggiornamento dal PC) e server.py
+(ogni 30 minuti mentre Avvia è aperto).
+Uso a mano:  python pubblica_quote.py
 Fa un commit solo se le quote sono cambiate o il file ha più di 3 ore.
 """
 import subprocess
@@ -21,6 +23,20 @@ def git(*args):
     return r.stdout
 
 
+def pubblica(nuove):
+    """Salva `nuove` (quote scaricate ora) in quote_daznbet.json e le pubblica. Restituisce un messaggio."""
+    vecchie, quando = daznbet.da_file()
+    if vecchie == nuove and quando and config.adesso() - quando < timedelta(hours=3):
+        return "Quote DAZN Bet invariate da meno di 3 ore: niente da pubblicare."
+    daznbet.salva(nuove)
+    git("add", daznbet.FILE.name)
+    if not git("status", "--porcelain", "--", daznbet.FILE.name).strip():
+        return "Quote DAZN Bet già pubblicate."
+    git("commit", "-m", "Quote DAZN Bet: {} partite".format(len(nuove)), "--", daznbet.FILE.name)
+    git("push", "origin", "main")  # se GitHub è avanti si ferma qui: niente rebase automatici su un albero con altre modifiche
+    return "Pubblicate le quote DAZN Bet di {} partite.".format(len(nuove))
+
+
 def main():
     try:
         nuove = daznbet.scarica_quote()
@@ -28,19 +44,13 @@ def main():
         print("DAZN Bet non risponde ({}): non pubblico nulla.".format(e))
         return 1
     if not nuove:
-        print("Nessuna quota trovata: non pubblico nulla.")
+        print("Nessuna quota DAZN Bet trovata: non pubblico nulla.")
         return 1
-    vecchie, quando = daznbet.da_file()
-    if vecchie == nuove and quando and config.adesso() - quando < timedelta(hours=3):
-        print("Quote invariate da meno di 3 ore: niente da pubblicare.")
-        return 0
-    daznbet.salva(nuove)
-    git("add", daznbet.FILE.name)
-    if not git("status", "--porcelain", "--", daznbet.FILE.name).strip():
-        return 0
-    git("commit", "-m", "Quote DAZN Bet: {} partite".format(len(nuove)), "--", daznbet.FILE.name)
-    git("push", "origin", "main")  # se GitHub è avanti si ferma qui: niente rebase automatici su un albero con altre modifiche
-    print("Pubblicate le quote di {} partite.".format(len(nuove)))
+    try:
+        print(pubblica(nuove))
+    except RuntimeError as e:
+        print("Quote scaricate ma non pubblicate: {}".format(e))
+        return 1
     return 0
 
 

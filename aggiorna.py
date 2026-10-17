@@ -6,6 +6,7 @@ Uso:   python3 aggiorna.py            (aggiorna tutto e rigenera la pagina)
 Da lanciare quando escono le formazioni (circa 1 ora prima di ogni partita): ogni esecuzione
 scarica solo le novità, quindi è veloce.
 """
+import os
 import sys
 import warnings
 from datetime import date, datetime, timedelta
@@ -18,6 +19,7 @@ import calcoli  # noqa: E402
 import presenza  # noqa: E402
 import config  # noqa: E402
 import pagina  # noqa: E402
+import pubblica_quote  # noqa: E402
 from fonti import (aia, api_football, arbitri_espn, daznbet, espn, espn_dettaglio, football_data,  # noqa: E402
                    kickest, transfermarkt)
 
@@ -90,6 +92,12 @@ def main():
     quote_giocatori, nota_quote = daznbet.carica()
     if nota_quote:
         stato.append(nota_quote)
+    elif quote_giocatori and not os.environ.get("GITHUB_ACTIONS"):
+        # scaricate ora dal PC: le pubblico, così le legge anche la pagina online (GitHub non raggiunge DAZN Bet)
+        try:
+            print("    " + pubblica_quote.pubblica(quote_giocatori))
+        except RuntimeError as e:
+            print("    quote DAZN Bet non pubblicate online: {}".format(e))
     ctx = {
         "quote_giocatori": quote_giocatori,
         "anno": anno, "df": df, "lungo": lungo, "tabelle": tabelle, "designazioni": designazioni,
