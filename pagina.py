@@ -121,6 +121,8 @@ box-shadow:0 0 8px rgba(0,0,0,.3)}
 .cols table{font-size:13px}.cols th,.cols td{padding:6px 5px}.cols td.nome{white-space:normal;min-width:110px}
 .cols .barcell{min-width:96px;gap:6px}.cols .bar{max-width:40px}
 header .az{display:none}
+.cambio{display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--ink2);line-height:1.25}.cambio b{color:var(--ink)}
+.cambio .poco{color:var(--ink3);font-style:italic}
 html{-webkit-text-size-adjust:100%}
 @media (max-width:640px){
 body{padding:0 max(10px,env(safe-area-inset-left)) 0 max(10px,env(safe-area-inset-right));font-size:15px}
@@ -259,14 +261,40 @@ def cella_book(p):
         n(q, 2), " p-alta" if ev > 0 else "", "+" if ev > 0 else "", n(ev * 100, 0)))
 
 
+_PARTICELLE = {"de", "di", "da", "del", "della", "dal", "van", "von", "la", "le", "el", "al", "ben", "dos", "das", "do", "mac", "mc"}
+
+
+def cognome(nome):
+    parti = nome.split()
+    i = len(parti) - 1
+    while i > 1 and parti[i - 1].lower() in _PARTICELLE:
+        i -= 1
+    return " ".join(parti[i:]) if len(parti) > 1 else nome
+
+
+def riga_cambio(p, panchina):
+    """Sotto il nome: per un panchinaro chi toglie se entra, per un titolare chi lo sostituisce se esce."""
+    if p["ruolo"] == "P":
+        return ""
+    elenco = p["rileva"] if panchina else p["rilevato_da"]
+    storico = p["rileva_storico"] if panchina else p["rilevato_storico"]
+    etichetta = "al posto di" if panchina else "se esce, lo rileva"
+    if not storico:
+        return '<span class="cambio"><span class="poco">poco storico</span></span>'
+    if not elenco:
+        return ""
+    return '<span class="cambio">{}: {}</span>'.format(
+        etichetta, " · ".join("{} <b>{}</b>".format(escape(cognome(n)), pct(x)) for n, x in elenco))
+
+
 def righe_giocatori(lista, panchina):
     out = []
     for p in sorted(lista, key=lambda x: -x["p_giallo"]) if panchina else lista:
         alto = ' class="alto"' if p["p_giallo"] >= 0.2 else ""
         tag = "" if p["collegato"] else '<span class="tag" title="Giocatore senza storico in Serie A: uso la media del ruolo">nuovo</span>'
         celle = [
-            '<td class="nome" data-v="{}">{}<span class="ruolo">{}</span>{}</td>'.format(
-                escape(p["nome"]), escape(p["nome"]), p["ruolo"], tag),
+            '<td class="nome" data-v="{}">{}<span class="ruolo">{}</span>{}{}</td>'.format(
+                escape(p["nome"]), escape(p["nome"]), p["ruolo"], tag, riga_cambio(p, panchina)),
             td(p["y90"], n(p["y90"], 2), ' class="nm"'), td(p["f90"], n(p["f90"], 1), ' class="det"'), td(p["t90"], n(p["t90"], 1), ' class="det"'),
             td(p["gialli_stag"], n(p["gialli_stag"], 0) if p["presenze_stag"] else "–", ' class="nm"'),
         ]

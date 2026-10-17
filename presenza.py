@@ -28,6 +28,8 @@ PRIOR_ENTRA_PORTIERE = 0.02
 EMIVITA_CAMBI_LEGA = 100.0    # osservazioni (squadra-partita) dopo cui il livello di cambi della lega dimentica metà del passato
 EMIVITA_CAMBI_SQUADRA = 10.0  # partite della squadra dopo cui la sua media dimentica metà del passato
 K_CAMBI = 12.0                # partite "virtuali" con cui la media di una squadra viene tirata verso la lega
+ALFA_CAMBIO = 3.0             # cambi "virtuali" della guida per ruolo nell'abbinamento chi entra / chi esce
+SOGLIA_STORICO = 3            # sotto questi cambi osservati il giocatore ha "poco storico"
 
 _RUOLO = {
     "G": "P",
@@ -56,7 +58,19 @@ class ModelloPresenza:
         cambi_squadra = []
         self.osservazioni = []   # (data, squadra, giocatori entrati) per ogni squadra e partita
         self.giocatore = {}     # id ESPN -> contatori pesati
+        self.coppie = {}        # id di chi entra -> {id di chi esce: peso}
+        self.q_ruoli = {}       # (ruolo di chi entra, ruolo di chi esce) -> peso
+        self.n_entrate = {}     # id -> cambi osservati in cui è entrato
+        self.n_uscite = {}      # id -> cambi osservati in cui è uscito
         portieri = set()
+        # i panchinari non hanno un ruolo nelle formazioni ESPN: lo ricavo da quando hanno giocato da titolari
+        ruolo_id = {}
+        for v in pool:
+            for lato in ("home", "away"):
+                f = v["formazioni"].get(lato)
+                for g in (f["giocatori"] if f else []):
+                    if g["titolare"] and _RUOLO.get(g["ruolo_espn"]):
+                        ruolo_id[g["id"]] = _RUOLO[g["ruolo_espn"]]
         for v in pool:
             w = 1.0 if _stagione(v["data"]) == stagione_corrente else PESO_STAGIONE_PRECEDENTE
             ruolo = {}
@@ -96,6 +110,14 @@ class ModelloPresenza:
                     r = ruolo.get(e["persone"][1])
                     if r:
                         uscite[r].append(min(e["minuto"], LUNGHEZZA - 0.1))
+                    p_in, p_out = e["persone"][0], e["persone"][1]
+                    self.coppie.setdefault(p_in, {})
+                    self.coppie[p_in][p_out] = self.coppie[p_in].get(p_out, 0.0) + w
+                    self.n_entrate[p_in] = self.n_entrate.get(p_in, 0) + 1
+                    self.n_uscite[p_out] = self.n_uscite.get(p_out, 0) + 1
+                    r_in, r_out = ruolo_id.get(p_in), ruolo_id.get(p_out)
+                    if r_in and r_out:
+                        self.q_ruoli[(r_in, r_out)] = self.q_ruoli.get((r_in, r_out), 0.0) + w
             cambi_squadra += list(per_squadra.values())
         self.portieri = portieri
         # --- curva del rischio: densità costante in ogni fascia, poi cumulata normalizzata a 1 a fine partita
@@ -192,6 +214,28 @@ class ModelloPresenza:
             somma = (1.0 / (1.0 + np.exp(-(logit + c)))).sum()
             lo, hi = (c, hi) if somma < target else (lo, c)
         return 1.0 / (1.0 + np.exp(-(logit + 0.5 * (lo + hi))))
+
+    # ---- chi rileva chi ----------------------------------------------------------------------
+    def chi_rileva(self, panchinari, titolari):
+        """{id panchinaro: {id titolare: probabilità che, se entra, lo faccia al posto di quel titolare}}.
+
+        Solo tra i titolari di questa partita. Si parte dai cambi osservati (chi ha rilevato chi) e si aggiunge
+        una guida per ruolo, pesata come ALFA_CAMBIO cambi virtuali: un attaccante da panchina rileva di norma un
+        attaccante, anche se non lo ha mai fatto prima."""
+        per_ruolo = {}
+        for t in titolari:
+            per_ruolo[t["ruolo"]] = per_ruolo.get(t["ruolo"], 0) + 1
+        out = {}
+        for b in panchinari:
+            tot = sum(self.q_ruoli.get((b["ruolo"], r), 0.0) + 0.5 for r in "PDCA")
+            guida = {t["id"]: (self.q_ruoli.get((b["ruolo"], t["ruolo"]), 0.0) + 0.5) / tot / per_ruolo[t["ruolo"]]
+                     for t in titolari}
+            norma = sum(guida.values()) or 1.0
+            visti = self.coppie.get(b["id"], {})
+            pesi = {t["id"]: visti.get(t["id"], 0.0) + ALFA_CAMBIO * guida[t["id"]] / norma for t in titolari}
+            somma = sum(pesi.values()) or 1.0
+            out[b["id"]] = {k: v / somma for k, v in pesi.items()}
+        return out
 
     def esposizione_subentrato(self):
         """Quota di rischio attesa per chi entra: media su tutti gli ingressi osservati di 1 - H(minuto)."""

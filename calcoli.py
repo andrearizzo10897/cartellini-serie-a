@@ -7,6 +7,7 @@ import pandas as pd
 import modello
 from config import FORMA_BREVE, FORMA_LUNGA, MINUTI_PRIOR, PESO_STAGIONE
 from fonti import daznbet
+from presenza import SOGLIA_STORICO
 from utils import e_derby, nome_squadra, senza_accenti
 
 SOGLIE = [3.5, 4.5, 5.5]
@@ -468,6 +469,30 @@ def riconcilia_squadra(profili_titolari, profili_panchina, nome_squadra, atteso_
     return k
 
 
+def abbina_cambi(titolari, panchina, pm, soglia=0.05, quanti=3):
+    """Per ogni panchinaro "rileva": chi toglie se entra; per ogni titolare "rilevato_da": chi lo sostituisce se esce.
+
+    Solo giocatori della formazione di questa partita. Con meno di SOGLIA_STORICO cambi osservati il giocatore
+    ha "poco storico" (campo *_storico = False) e la pagina non mostra percentuali."""
+    for g in titolari + panchina:
+        g["rileva"], g["rilevato_da"] = [], []
+        g["rileva_storico"] = g["rilevato_storico"] = False
+    if not titolari or not panchina:
+        return
+    cond = pm.chi_rileva(panchina, titolari)          # P(esce il titolare s | entra il panchinaro b)
+    nomi = {t["id"]: t["nome"] for t in titolari}
+    for b in panchina:
+        ordinati = sorted(cond[b["id"]].items(), key=lambda kv: -kv[1])
+        b["rileva"] = [(nomi[k], v) for k, v in ordinati[:quanti] if v >= soglia]
+        b["rileva_storico"] = pm.n_entrate.get(b["id"], 0) >= SOGLIA_STORICO
+    for t in titolari:
+        pesi = [(b["nome"], b["p_entra"] * cond[b["id"]][t["id"]]) for b in panchina]
+        tot = sum(p for _, p in pesi)
+        if tot > 0:
+            t["rilevato_da"] = [(n, p / tot) for n, p in sorted(pesi, key=lambda x: -x[1])[:quanti] if p / tot >= soglia]
+        t["rilevato_storico"] = pm.n_uscite.get(t["id"], 0) >= SOGLIA_STORICO and t["ruolo"] != "P"
+
+
 # ---------------------------------------------------------------------------------------------
 # Una partita completa
 # ---------------------------------------------------------------------------------------------
@@ -501,6 +526,7 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
             (titolari if g["titolare"] else panchina).append(pg)
         riconcilia_squadra(titolari, panchina, sq, atteso_sq, ctx["presenza"])
         daznbet.associa(ctx.get("quote_giocatori", {}).get((casa, trasf)), sq, titolari + panchina)
+        abbina_cambi(titolari, panchina, ctx["presenza"])
         ordine = {"P": 0, "D": 1, "C": 2, "A": 3}
         titolari.sort(key=lambda p: (ordine.get(p["ruolo"], 9), -p["p_giallo"]))
         panchina.sort(key=lambda p: -p["p_giallo"])
