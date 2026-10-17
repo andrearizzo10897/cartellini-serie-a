@@ -53,7 +53,7 @@ def _estrai(testo):
     i = testo.find("FORMAZIONI UFFICIALI")
     if i < 0:
         return None
-    blocchi = re.findall(r"[A-ZÀ-Ü][A-ZÀ-Ü' .-]+ \((\d(?:-\d){1,4})\): (.+?)\. All\.", testo[i:i + 3000])
+    blocchi = re.findall(r"[A-ZÀ-Ü][A-ZÀ-Ü' .-]+ \s*\((\d(?:-\d){1,4})\)\s*:\s*(.+?)\.\s*All\.", testo[i:i + 3000])
     if len(blocchi) < 2:
         return None
     out = []
@@ -69,8 +69,10 @@ def _tok(s):
     return [t for t in re.split(r"[^a-z]+", senza_accenti(s).lower()) if t]
 
 
-def _trova(nome_sky, rosa, usati):
-    """Giocatore della rosa che corrisponde a un nome di Sky (solo cognome, a volte con l'iniziale o due parole)."""
+def _trova(nome_sky, rosa, usati, portiere=False):
+    """Giocatore della rosa che corrisponde a un nome di Sky (solo cognome, a volte con l'iniziale o due parole).
+
+    A parità di nome (due Martínez) vince chi ha il ruolo giusto: il primo della lista di Sky è il portiere."""
     t = _tok(nome_sky)
     if not t:
         return None
@@ -81,7 +83,8 @@ def _trova(nome_sky, rosa, usati):
         pieces = _tok(g["nome"])
         ok = all((len(x) == 1 and any(p[0] == x for p in pieces[:-1])) or x in pieces for x in t)
         if ok:
-            migliori.append((-sum(len(x) for x in t if x in pieces), g))
+            sbagliato = (g.get("ruolo_espn") == "G") != portiere if g.get("ruolo_espn") else False
+            migliori.append(((sbagliato, -sum(len(x) for x in t if x in pieces)), g))
     if migliori:
         return min(migliori, key=lambda m: m[0])[1]
     # soprannomi ("Kike Perez" per Enrique Pérez): se l'ultima parola è il cognome di un solo giocatore, è lui
@@ -124,8 +127,8 @@ def ufficiali(ev, anno, ultima_formazione, giornata=None):
         rosa.update({g["id"]: g for g in ultima})   # prima chi ha giocato l'ultima, poi il resto della rosa
         tutti = list(rosa.values())
         usati, titolari = set(), []
-        for n in nomi:
-            g = _trova(n, tutti, usati)
+        for k, n in enumerate(nomi):
+            g = _trova(n, tutti, usati, portiere=(k == 0))
             if not g:
                 return None   # un nome non riconosciuto: meglio le altre fonti che una formazione sbagliata
             usati.add(g["id"])
