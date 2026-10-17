@@ -7,99 +7,138 @@ GIORNI = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
 RUOLI = {"P": "Portiere", "D": "Difensore", "C": "Centrocampista", "A": "Attaccante"}
 
 CSS = """
-:root{color-scheme:dark;--bg:#121211;--surf:#1a1a19;--surf2:#232321;--ink:#f0efec;--ink2:#c3c2b7;--ink3:#97968c;
---line:#33332f;--bar:#3987e5;--bar-bg:#24334a;--accent:#3987e5;--alto:#f2994a;--medio:#e2c044}
-:root[data-theme="light"]{color-scheme:light;--bg:#f6f6f4;--surf:#fcfcfb;--surf2:#f0efec;--ink:#0b0b0b;--ink2:#52514e;
---ink3:#7c7b76;--line:#e2e1dc;--bar:#2a78d6;--bar-bg:#e3ebf7;--accent:#2a78d6;--alto:#c25e00;--medio:#9a7400}
+:root{color-scheme:light;--bg:#f1f3fa;--surf:#fff;--surf2:#eef1fb;--ink:#1b2340;--ink2:#4a5472;--ink3:#7b85a3;
+--line:#dde2f0;--bar:#4f7cff;--bar-bg:#e3e9ff;--accent:#4f46e5;--alto:#e8590c;--medio:#b98300;--giallo:#f7c600;
+--rosa:#e11d48;--teal:#0891b2;--verde:#16a34a;--hero1:#4f46e5;--hero2:#0ea5c6;--ombra:0 1px 3px rgba(27,35,64,.08)}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#12131f;--surf:#1b1d2e;--surf2:#25283d;--ink:#eceefa;--ink2:#b9bfd9;--ink3:#8a92b2;
+--line:#323650;--bar:#6c8dff;--bar-bg:#27304f;--accent:#8b8cff;--alto:#ff9a52;--medio:#f0c040;--hero1:#312e81;--hero2:#0e7490;
+--ombra:0 1px 3px rgba(0,0,0,.4)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-padding:0 16px}
-.wrap{max-width:1180px;margin:0 auto;padding:20px 0 48px}
-header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;margin-bottom:14px}
-h1{font-size:22px;margin:0}h2{font-size:17px;margin:22px 0 8px}h3{font-size:14px;margin:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:0 16px}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 0 48px}
+header.hero{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:14px;padding:16px 18px;
+border-radius:16px;color:#fff;background:linear-gradient(120deg,var(--hero1),var(--hero2));box-shadow:0 4px 14px rgba(79,70,229,.25)}
+header.hero .muted,header.hero .small{color:rgba(255,255,255,.85)}
+header.hero .info{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.logo{display:inline-block;width:17px;height:24px;background:var(--giallo);border-radius:3px;transform:rotate(12deg);
+box-shadow:0 2px 6px rgba(0,0,0,.3);margin-right:10px;vertical-align:-4px}
+h1{font-size:22px;margin:0}h2{font-size:17px;margin:20px 0 8px}h3{font-size:14px;margin:0}
 .muted{color:var(--ink2)}.small{font-size:12px;color:var(--ink3)}
-.note{background:var(--surf2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:6px 0;color:var(--ink2);font-size:13px}
-nav.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin:14px 0}
-nav.tabs button,.chip{font:inherit;color:var(--ink2);background:none;border:1px solid transparent;border-radius:8px 8px 0 0;
-padding:8px 14px;cursor:pointer}
-nav.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--line);border-bottom-color:var(--bg);background:var(--surf);
-font-weight:600;margin-bottom:-1px}
+.note{background:var(--surf);border:1px solid var(--line);border-left:4px solid var(--giallo);border-radius:8px;padding:8px 12px;margin:6px 0;
+color:var(--ink2);font-size:13px}
+nav.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}
+nav.tabs button,.chip{font:inherit;color:var(--ink2);background:var(--surf);border:1px solid var(--line);border-radius:99px;
+padding:7px 16px;cursor:pointer;box-shadow:var(--ombra)}
+nav.tabs button[aria-selected=true]{color:#fff;border-color:transparent;background:linear-gradient(120deg,var(--hero1),var(--hero2));font-weight:600}
 .partite{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
-.chip{border:1px solid var(--line);border-radius:8px;background:var(--surf);padding:6px 10px;text-align:left;line-height:1.3}
+.chip{border-radius:8px;padding:6px 10px;text-align:left;line-height:1.3}
 .chip small{display:block;color:var(--ink3)}
 .chip[aria-selected=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.card{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--ombra)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:10px 0}
-.kpi{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.kpi{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:10px 14px;box-shadow:var(--ombra)}
 .kpi b{display:block;font-size:22px;line-height:1.2}.kpi span{color:var(--ink2);font-size:12px}
-.badge{display:inline-block;border-radius:99px;padding:2px 9px;font-size:12px;border:1px solid var(--line);color:var(--ink2)}
-.badge.ok{border-color:var(--accent);color:var(--accent);font-weight:600}
+.badge{display:inline-block;border-radius:99px;padding:2px 9px;font-size:12px;border:1px solid var(--line);color:var(--ink2);background:var(--surf)}
+.badge.ok{border-color:var(--verde);color:var(--verde);font-weight:600;background:rgba(22,163,74,.08)}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 th{font-weight:600;color:var(--ink2);font-size:12px;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surf)}
 th[data-sort=asc]::after{content:" \\25B2";font-size:9px}th[data-sort=desc]::after{content:" \\25BC";font-size:9px}
-tr.sep td{background:var(--surf2);color:var(--ink2);font-size:12px;font-weight:600;cursor:default}
+tr.sep td{background:var(--surf2);color:var(--accent);font-size:12px;font-weight:700;cursor:default}
 .cols{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
-@media (min-width:1240px){.cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .cols .card{margin-bottom:0}
 .det{display:none}.det-on .det{display:table-cell}
 .opzioni{display:flex;justify-content:flex-end;margin:0 0 8px;font-size:13px;color:var(--ink2)}
 .opzioni label{cursor:pointer;display:flex;gap:6px;align-items:center}
 .testata h2{margin:0 0 2px;font-size:20px}
 .rischio{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0 4px}
-.rischio .r{background:var(--surf2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.rischio .r{background:var(--surf2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .rischio .r b{display:block;font-size:20px;line-height:1.2}.rischio .r span{font-size:12px;color:var(--ink2)}
-h3.titolo{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:16px 0 0}
+h3.titolo{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin:16px 0 0}
 details.panchina{margin-top:10px;border-top:1px solid var(--line)}
 details.panchina>summary{padding:10px 0 6px;font-weight:600;color:var(--ink)}
-.bar.p-media i{background:var(--medio)}.bar.p-alta i{background:var(--alto)}
+.bar.p-media i{background:linear-gradient(90deg,#fde047,var(--medio))}.bar.p-alta i{background:linear-gradient(90deg,#fb923c,var(--alto))}
 .barcell .p-media b{color:var(--medio)}.barcell .p-alta b{color:var(--alto)}
 .barcell>span{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
-.q{font-size:11px;color:var(--ink3);font-weight:400}
-details.partita{background:var(--surf);border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
-details.partita>summary{list-style:none;cursor:pointer;padding:12px 14px 12px 36px;display:block;position:relative}
-details.partita>summary::-webkit-details-marker{display:none}
-details.partita>summary::before{content:"\\25B8";color:var(--ink3);position:absolute;left:14px;top:13px;transition:transform .15s}
-details.partita[open]>summary::before{transform:rotate(90deg)}
-details.partita[open]>summary{border-bottom:1px solid var(--line)}
-.s-riga1{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
-.s-squadre{font-size:16px;font-weight:700;color:var(--ink)}.s-quando{color:var(--ink2);font-size:13px}
-.s-riga2{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;font-size:13px;color:var(--ink2)}
-.s-riga2 b{color:var(--ink)}.s-riga2 b.p-media{color:var(--medio)}.s-riga2 b.p-alta{color:var(--alto)}
-.s-top{margin:4px 0 0;font-size:13px;color:var(--ink2)}.s-top b{color:var(--ink)}
-details.partita>.corpo{padding:12px 14px 14px}
-.riepilogo .riga{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:2px 0}
-.riepilogo .riga span{color:var(--ink2)}.riepilogo .riga b{color:var(--ink)}
-.riepilogo h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:0 0 6px}
+.q{font-size:11px;color:var(--ink3);font-weight:400}.q.p-alta{color:var(--verde);font-weight:700}
+td>b+.q{display:block;line-height:1.2}
+.mini{display:block;height:6px;border-radius:3px;background:var(--bar-bg);overflow:hidden}
+.mini i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal),var(--accent))}
+.s-squadre{font-size:15px;font-weight:700;color:var(--ink)}.s-quando{color:var(--ink2);font-size:13px}
+.s-stat{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink2)}
+.s-stat b{color:var(--ink)}.s-stat b.p-media{color:var(--medio)}.s-stat b.p-alta{color:var(--alto)}
+.s-stat>.nm{display:flex;gap:10px}.s-stat .mini{width:64px}.s-stat .mini i{background:linear-gradient(90deg,#fde047,var(--alto))}
+.riepilogo{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin:8px 0 12px;align-items:start}
+.riepilogo .kpi{padding:8px 12px;border-top:4px solid var(--accent)}
+.riepilogo .kpi.g{border-top-color:var(--giallo)}.riepilogo .kpi.a{border-top-color:var(--accent)}.riepilogo .kpi.p{border-top-color:var(--rosa)}
+.riepilogo .riga{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0 0}
+.riepilogo .riga span{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.riepilogo .riga b{display:inline;font-size:12px;color:var(--ink)}
+.riepilogo .mini{height:4px;margin:1px 0 4px}
+.riepilogo .g .mini i{background:linear-gradient(90deg,#fde047,#f59e0b)}
+.riepilogo .p .mini i{background:linear-gradient(90deg,#fda4af,var(--rosa))}
+.riepilogo h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:0 0 4px}
+.titolo-sez{display:flex;align-items:baseline;gap:10px;margin:14px 0 8px}.titolo-sez h2{margin:0}
 .barcell{display:flex;align-items:center;gap:8px;justify-content:flex-end;min-width:120px}
 .bar{flex:1;max-width:90px;height:8px;border-radius:4px;background:var(--bar-bg);overflow:hidden}
-.bar i{display:block;height:100%;background:var(--bar);border-radius:4px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--accent));border-radius:4px}
 .alto b{color:var(--ink)}
 td.nome{font-weight:500}.ruolo{color:var(--ink3);font-size:12px;margin-left:4px}
 .tag{color:var(--ink3);font-size:11px;margin-left:4px}
 details{margin:6px 0}summary{cursor:pointer;color:var(--ink2)}
 .legenda{font-size:12px;color:var(--ink3);margin:6px 0 0}
 .hid{display:none}
-.agg{font:inherit;font-weight:600;color:#fff;background:var(--accent);border:0;border-radius:8px;padding:6px 14px;cursor:pointer}
-.agg[disabled]{opacity:.6;cursor:wait}#msg{font-size:12px;color:var(--ink2);margin-left:6px}
+.agg{font:inherit;font-weight:700;color:var(--hero1);background:#fff;border:0;border-radius:99px;padding:7px 18px;cursor:pointer;
+box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.agg[disabled]{opacity:.6;cursor:wait}#msg{font-size:12px;color:rgba(255,255,255,.9);margin-left:6px}
 .az{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.strip{position:relative;margin:6px 0 12px}
+.tiles{display:flex;gap:6px;overflow-x:auto;scroll-behavior:smooth;scrollbar-width:none;padding:2px 0}
+.tiles::-webkit-scrollbar{display:none}
+.chip.tile{flex:0 0 200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:86px;
+border:0;border-radius:6px;padding:10px 8px;color:#fff;text-align:center;box-shadow:var(--ombra);
+background:linear-gradient(160deg,#2c3568 0 68%,#8a93bd 68% 100%)}
+.chip.tile.lv-medio{background:linear-gradient(160deg,#2c3568 0 68%,#d9b84a 68% 100%)}
+.chip.tile.lv-alto{background:linear-gradient(160deg,#2c3568 0 68%,#e8854a 68% 100%)}
+.tile .t-data{font-size:13px;font-weight:500}
+.tile .t-sq{font-size:15px;font-weight:800;text-transform:uppercase;line-height:1.15}
+.chip.tile[aria-selected=true]{color:var(--giallo);box-shadow:0 0 0 3px var(--giallo)}
+.freccia{position:absolute;top:2px;bottom:2px;width:32px;border:0;background:var(--accent);color:#fff;font-size:24px;line-height:1;cursor:pointer;
+box-shadow:0 0 8px rgba(0,0,0,.3)}
+.freccia.dx{right:0;border-radius:6px 0 0 6px}.freccia.sx{left:0;border-radius:0 6px 6px 0;display:none}
+.match-panel{background:var(--surf);border:1px solid var(--line);border-radius:12px;box-shadow:var(--ombra);overflow:hidden;margin-bottom:12px}
+.mp-testa{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:12px 16px;background:linear-gradient(120deg,#2c3568,var(--hero1));color:#fff}
+.mp-testa h2{margin:0;font-size:20px}.mp-testa .s-quando{color:rgba(255,255,255,.85)}
+.mp-testa .s-stat,.mp-testa .s-stat b{color:#fff}.mp-testa .s-stat .mini{background:rgba(255,255,255,.25)}
+.s-stat{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}.s-stat>.nm{display:flex;gap:10px}
+.s-stat .mini{width:64px}.s-stat .mini i{background:linear-gradient(90deg,#fde047,var(--alto))}
+.match-panel>.corpo{padding:12px 14px 14px}
+.lato{display:inline-block;font-size:10px;letter-spacing:.08em;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--accent);color:#fff;margin-right:6px;vertical-align:1px}
+.cols .card:nth-child(2) .lato{background:var(--rosa)}
+@media (min-width:980px){.cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cols table{font-size:13px}.cols th,.cols td{padding:6px 5px}.cols td.nome{white-space:normal;min-width:110px}
+.cols .barcell{min-width:96px;gap:6px}.cols .bar{max-width:40px}
+header .az{display:none}
 html{-webkit-text-size-adjust:100%}
 @media (max-width:640px){
 body{padding:0 max(10px,env(safe-area-inset-left)) 0 max(10px,env(safe-area-inset-right));font-size:15px}
-.wrap{padding:12px 0 40px}
+.wrap{padding:10px 0 40px}
 h1{font-size:19px}h2{font-size:16px}
-header{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+header.hero{flex-direction:column;align-items:stretch;gap:8px;padding:14px}
 header .az{order:2}header .info{order:3}
 .agg{flex:1;padding:12px 14px;font-size:15px}#msg{flex-basis:100%;margin:0}
-.nm{display:none}
-nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:10px -10px;padding:0 10px}
+.nm,.s-stat>.nm{display:none}
+.chip.tile{flex-basis:150px}
+nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:10px -10px;padding:0 10px 4px}
 nav.tabs::-webkit-scrollbar,.partite::-webkit-scrollbar{display:none}
-nav.tabs button{flex:0 0 auto;white-space:nowrap;padding:12px 14px}
+nav.tabs button{flex:0 0 auto;white-space:nowrap;padding:10px 14px}
 .partite{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:6px -10px 12px;padding:0 10px 4px;scroll-snap-type:x proximity}
 .chip{flex:0 0 auto;min-width:148px;scroll-snap-align:start;padding:8px 10px}
 .kpis{grid-template-columns:1fr 1fr}.kpi:first-child{grid-column:1/-1}.kpi b{font-size:19px}
+.riepilogo{grid-template-columns:1fr}.riepilogo .kpi:first-child{grid-column:auto}
+.s-stat{margin-left:0;flex-basis:100%}
 .card{padding:10px 10px}
 th,td{padding:9px 6px}
 .barcell{min-width:84px;gap:6px}.bar{max-width:44px}
@@ -109,7 +148,7 @@ th,td{padding:9px 6px}
 td.nome{white-space:normal;min-width:120px;max-width:170px}
 .legenda{font-size:12px}
 }
-button.tema{font:inherit;color:var(--ink2);background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:4px 10px;cursor:pointer}
+button.tema{font:inherit;color:#fff;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);border-radius:99px;padding:3px 10px;cursor:pointer}
 """
 
 JS = """
@@ -158,9 +197,13 @@ function online(){
     else setTimeout(giro,8000)}).catch(function(){setTimeout(giro,8000)})};
   setTimeout(giro,10000)
  }).catch(function(e){ag.disabled=false;msg.textContent='Non riesco ad avviare l’aggiornamento ('+e.message+'). Si aggiorna comunque da solo ogni 20 minuti.'})}
+var tl=$('.tiles');if(tl){var sx=$('.freccia.sx'),dx=$('.freccia.dx');
+function frecce(){sx.style.display=tl.scrollLeft>5?'block':'none';dx.style.display=tl.scrollLeft+tl.clientWidth<tl.scrollWidth-5?'block':'none'}
+sx.addEventListener('click',function(){tl.scrollBy({left:-420,behavior:'smooth'})});dx.addEventListener('click',function(){tl.scrollBy({left:420,behavior:'smooth'})});
+tl.addEventListener('scroll',frecce);window.addEventListener('resize',frecce);frecce()}
 var dt=$('#det');if(dt){dt.addEventListener('change',function(){document.body.classList.toggle('det-on',dt.checked)})}
 var tm=$('#tema');if(tm){tm.addEventListener('click',function(){var d=document.documentElement,c=d.getAttribute('data-theme');
- d.setAttribute('data-theme',c==='light'?'dark':'light')})}
+ d.setAttribute('data-theme',c==='dark'?'light':'dark')})}
 })();
 """
 
@@ -241,14 +284,15 @@ def righe_giocatori(lista, panchina):
 
 
 def tabella_squadra(sq):
-    t = ('<div class="card"><h3>{} <span class="muted">· gialli attesi {}</span>{}</h3><div class="scroll">'
+    t = ('<div class="card"><h3><span class="lato">{lato}</span>{} <span class="muted">· gialli attesi {}</span>{}</h3><div class="scroll">'
          '<table class="ord"><thead><tr><th>Giocatore</th><th class="nm" title="Gialli ogni 90 minuti (pesati sulle ultime stagioni)">Gialli/90</th>'
          '<th class="det">Falli/90</th><th class="det">Contrasti/90</th><th class="nm" title="Gialli presi in questa stagione">Gialli 26/27</th>'
          '<th class="nm" title="Probabilità di essere sostituito prima della fine: meno minuti in campo, meno rischio">Sostituito</th>'
          '<th title="Probabilità di essere ammonito in questa partita">P(giallo)</th>'
          '<th title="Quota DAZN Bet per «giocatore ammonito» e valore atteso rispetto alla probabilità stimata">DAZN Bet</th></tr></thead><tbody>'
          ).format(escape(sq["nome"]), n(sq["atteso"], 2),
-                  ' <span class="small">· modulo {}</span>'.format(escape(sq["formazione"])) if sq["formazione"] else "")
+                  ' <span class="small">· modulo {}</span>'.format(escape(sq["formazione"])) if sq["formazione"] else "",
+                  lato="CASA" if sq["lato"] == "home" else "OSPITE")
     t += "<tr class=\"sep\"><td colspan=\"8\">Titolari</td></tr>" + righe_giocatori(sq["titolari"], False)
     t += "</tbody></table></div>"
     if sq["panchina"]:
@@ -287,10 +331,8 @@ def scheda_partita(i, p):
         else:
             arb = ('<div class="kpi"><span>Arbitro</span><b>{}</b><span>Senza storico nei dati: nessun '
                    'aggiustamento sul modello</span></div>').format(escape(p["arbitro"]))
-        arb_breve = "Arbitro " + escape(p["arbitro"])
     else:
         arb = '<div class="kpi"><span>Arbitro</span><b>da designare</b><span>L\'AIA pubblica le designazioni a metà settimana</span></div>'
-        arb_breve = "arbitro da designare"
     badge = ('<span class="badge ok">Formazioni ufficiali</span>' if p["ufficiale"]
              else '<span class="badge" title="Le ufficiali escono circa un\'ora prima del calcio d\'inizio">Formazione probabile</span>')
     soglie = ""
@@ -302,19 +344,17 @@ def scheda_partita(i, p):
                             pct(s["lega"]), pct(s["tipo"]), pct(s["arbitro"]))
         over_breve += '<span>Over {} <b class="{}">{}</b></span>'.format(n(s["soglia"], 1), liv, pct(s["prob"]))
     candidati = giocatori_partita(p)
-    top3 = " · ".join("<b>{}</b> {}".format(escape(nome.split()[-1] if len(nome.split()) > 1 else nome), pct(pg))
-                      for pg, nome, sq, panc in candidati[:3])
     rischio = ""
     if candidati:
         rischio = '<h3 class="titolo">Più a rischio di ammonizione</h3><div class="rischio">' + "".join(
             '<div class="r"><b class="{}">{}</b><span>{} · {}{}</span></div>'.format(
                 livello(pg, 0.08, 0.15), pct(pg, 0), escape(nome), escape(sq), " · panchina" if panc else "")
             for pg, nome, sq, panc in candidati[:6]) + "</div>"
-    riga1 = ('<div class="s-riga1"><span class="s-squadre">{c} – {t}</span><span class="s-quando">{q}</span>{b}</div>'
-             ).format(c=casa, t=trasf, q=quando(ev["inizio"]), b=badge)
-    riga2 = '<div class="s-riga2"><span><b>{}</b> gialli attesi</span>{}<span>{}</span></div>'.format(
-        n(p["atteso"]), over_breve, arb_breve)
-    riga3 = '<div class="s-top">Più a rischio: {}</div>'.format(top3) if top3 else ""
+    # testata della partita scelta: squadre, orario, formazioni e, a destra, gialli attesi con barretta e over
+    testa = ('<h2>{c} – {t}</h2><span class="s-quando">{q}</span>{b}'
+             '<span class="s-stat"><span><b>{a}</b> gialli attesi</span><span class="mini"><i style="width:{w:.0f}%"></i></span>'
+             '<span class="nm">{o}</span></span>').format(
+        c=casa, t=trasf, q=quando(ev["inizio"]), b=badge, a=n(p["atteso"]), w=max(0, min(100, p["atteso"] / 6.0 * 100)), o=over_breve)
     corpo = (
         '<div class="kpis">{arb}'
         '<div class="kpi"><span>Gialli attesi (totale)</span><b>{att}</b><span>{casa}: {ac} · {trasf}: {at}<br>senza arbitro e tipo: {base}</span></div>'
@@ -332,25 +372,44 @@ def scheda_partita(i, p):
              base=n(p["atteso_base"]), tipo=escape(p["tipo"]),
              ft="{:+.0f}%".format((p["f_tipo"] - 1) * 100).replace("+0%", "nessuno").replace("-0%", "nessuno"),
              soglie=soglie, rischio=rischio, t1=tabella_squadra(p["squadre"][0]), t2=tabella_squadra(p["squadre"][1]))
-    return '<details class="partita"><summary>{}{}{}</summary><div class="corpo">{}</div></details>'.format(riga1, riga2, riga3, corpo)
+    return ('<section class="match-panel{}" data-match="{}" data-match-gruppo="match"><div class="mp-testa">{}</div>'
+            '<div class="corpo">{}</div></section>').format("" if i == 0 else " hid", i, testa, corpo)
+
+
+MESI = ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DIC"]
+
+
+def tessera(i, p):
+    """Tessera della fila orizzontale: data e ora, squadre su due righe. Il triangolo in basso segnala le partite con più gialli."""
+    ev = p["ev"]
+    dt = ev["inizio"]
+    lv = "lv-alto" if p["atteso"] >= 4.0 else ("lv-medio" if p["atteso"] >= 3.6 else "")
+    return ('<button type="button" class="chip tile {}" data-match="{}" data-match-gruppo="match" aria-selected="{}">'
+            '<span class="t-data">{} {} | {:02d}:{:02d}</span><span class="t-sq">{}<br>{}</span></button>').format(
+        lv, i, "true" if i == 0 else "false", dt.day, MESI[dt.month - 1], dt.hour, dt.minute,
+        escape(nome_squadra(ev["casa"])), escape(nome_squadra(ev["trasf"])))
 
 
 def riepilogo_giornata(partite):
     """Tre riquadri in cima: dove ci sono più gialli attesi, arbitri più severi, giocatori più a rischio."""
     if not partite:
         return ""
-    righe = lambda coppie: "".join('<div class="riga"><span>{}</span><b>{}</b></div>'.format(a, b) for a, b in coppie)
-    gialli = [("{} – {}".format(escape(nome_squadra(x["ev"]["casa"])), escape(nome_squadra(x["ev"]["trasf"]))), n(x["atteso"]))
+    def righe(terne):
+        """(testo, valore, quota 0-1 della barretta) -> righe con una barretta sotto."""
+        return "".join('<div class="riga"><span>{}</span><b>{}</b></div><span class="mini"><i style="width:{:.0f}%"></i></span>'
+                       .format(a, b, max(4, min(100, f * 100))) for a, b, f in terne)
+    gialli = [("{} – {}".format(escape(nome_squadra(x["ev"]["casa"])), escape(nome_squadra(x["ev"]["trasf"]))), n(x["atteso"]), x["atteso"] / 6.0)
               for x in sorted(partite, key=lambda x: -x["atteso"])[:3]]
     con_arbitro = sorted([x for x in partite if x["info_arbitro"] and x["info_arbitro"]["partite"] >= 10],
                          key=lambda x: -x["info_arbitro"]["gialli"])[:3]
-    arbitri = [("{} · {} ({} partite)".format(escape(x["arbitro"]), escape(nome_squadra(x["ev"]["casa"])), x["info_arbitro"]["partite"]),
-                n(x["info_arbitro"]["gialli"])) for x in con_arbitro] or [("Designazioni non ancora uscite", "")]
+    arbitri = [("{} · {}".format(escape(x["arbitro"]), escape(nome_squadra(x["ev"]["casa"]))),
+                n(x["info_arbitro"]["gialli"]), x["info_arbitro"]["gialli"] / 7.0) for x in con_arbitro] \
+        or [("Designazioni non ancora uscite", "", 0)]
     tutti = sorted([(pg, nome, sq) for x in partite for pg, nome, sq, _ in giocatori_partita(x)], reverse=True)[:5]
-    giocatori = [("{} · {}".format(escape(nome), escape(sq)), pct(pg)) for pg, nome, sq in tutti]
-    return ('<div class="kpis riepilogo"><div class="kpi"><h3>Più gialli attesi</h3>{}</div>'
-            '<div class="kpi"><h3>Arbitri più severi (gialli/partita, almeno 10 partite)</h3>{}</div>'
-            '<div class="kpi"><h3>Giocatori più a rischio</h3>{}</div></div>').format(righe(gialli), righe(arbitri), righe(giocatori))
+    giocatori = [("{} · {}".format(escape(nome), escape(sq)), pct(pg), pg / 0.5) for pg, nome, sq in tutti]
+    return ('<div class="kpis riepilogo"><div class="kpi g"><h3>Più gialli attesi</h3>{}</div>'
+            '<div class="kpi a"><h3>Arbitri più severi (gialli a partita)</h3>{}</div>'
+            '<div class="kpi p"><h3>Giocatori più a rischio</h3>{}</div></div>').format(righe(gialli), righe(arbitri), righe(giocatori))
 
 
 # ---- Sezioni globali -------------------------------------------------------------------------
@@ -488,27 +547,37 @@ def genera(partite, sezioni, percorso):
     pannelli = "".join(scheda_partita(i, p) for i, p in enumerate(partite))
     if not partite:
         pannelli = '<div class="card">Nessuna partita in programma nei prossimi giorni.</div>'
-    note = "".join('<div class="note">{}</div>'.format(escape(s)) for s in sezioni["stato"])
+    # le note sulle fonti (Kickest, Transfermarkt...) vanno nella pagina "Come funziona"; qui resta solo quella sulle quote
+    def e_quote(s):
+        return s.startswith(("Quote DAZN", "DAZN Bet"))
+    note = "".join('<div class="note">{}</div>'.format(escape(s)) for s in sezioni["stato"] if e_quote(s))
+    stato_dati = ('<div class="card"><h3>Stato dei dati</h3>{}</div>'.format(
+        "".join('<div class="note">{}</div>'.format(escape(s)) for s in sezioni["stato"] if not e_quote(s)))
+        if any(not e_quote(s) for s in sezioni["stato"]) else "")
     tabs = [("partite", "Partite"), ("arbitri", "Arbitri"), ("squadre", "Squadre"), ("tipi", "Tipo di partita"), ("metodo", "Come funziona")]
     nav = "".join('<button role="tab" data-tab="{k}" data-tab-gruppo="tab" aria-selected="{s}">{v}</button>'.format(
         k=k, v=v, s="true" if k == "partite" else "false") for k, v in tabs)
     corpo = {
-        "partite": (riepilogo_giornata(partite) + '<div class="opzioni"><label><input type="checkbox" id="det"> '
-                    'Mostra falli e contrasti</label></div>' + pannelli),
+        "partite": (riepilogo_giornata(partite) + note +
+                    '<div class="titolo-sez"><h2>Partite</h2><span class="small">Scegli una partita dalla fila</span></div>' +
+                    ('<div class="strip"><button type="button" class="freccia sx" aria-label="Indietro">‹</button>'
+                     '<div class="tiles">{}</div><button type="button" class="freccia dx" aria-label="Avanti">›</button></div>'.format(
+                         "".join(tessera(i, p) for i, p in enumerate(partite))) if partite else "") +
+                    '<div class="opzioni"><label><input type="checkbox" id="det"> Mostra falli e contrasti</label></div>' + pannelli),
         "arbitri": "<h2>Arbitri: gialli e rossi a partita</h2>" + sezione_arbitri(sezioni["arbitri"], lega),
         "squadre": "<h2>Squadre: gialli fatti e subiti</h2>" + sezione_squadre(sezioni["squadre"]),
         "tipi": "<h2>Gialli per tipo di partita</h2>" + sezione_tipi(sezioni["tipi"]),
-        "metodo": sezione_metodo(lega, sezioni["tempo"]),
+        "metodo": stato_dati + sezione_metodo(lega, sezioni["tempo"]),
     }
     sez = "".join('<div data-tab="{k}" data-tab-gruppo="tab" class="{c}">{h}</div>'.format(
         k=k, h=h, c="" if k == "partite" else "hid") for k, h in corpo.items())
     html = """<!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#121211">
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#4f46e5">
 <title>Cartellini Serie A</title><style>{css}</style><noscript><style>.hid{{display:block!important}}nav.tabs,.az,#tema{{display:none!important}}</style></noscript></head>
 <body><div class="wrap">
-<header><div class="tit"><h1>Cartellini Serie A</h1><div class="muted">Stagione {anno}/{anno2} · Media Serie A (ultime 380 partite): {media} gialli a partita ({over35} oltre 3,5 · {over45} oltre 4,5 · {over55} oltre 5,5)</div></div>
-<div class="small info">Aggiornato il {agg} · {fin} partite di quest'anno analizzate <button id="tema" class="tema" type="button">Tema chiaro/scuro</button></div><div class="az"><button id="agg" class="agg" type="button">Aggiorna</button><span id="msg"></span></div></header>
-<noscript><div class="note"><b>JavaScript disattivato</b> (succede nelle anteprime di Files, Drive o email): mostro tutte le partite e tutte le sezioni una sotto l'altra. Per avere schede e pulsante Aggiorna apri il file con Safari o Chrome.</div></noscript>{note}<nav class="tabs" role="tablist">{nav}</nav>{sez}
+<header class="hero"><div class="tit"><h1><span class="logo"></span>Cartellini Serie A</h1><div class="muted">Stagione {anno}/{anno2} · Media Serie A (ultime 380 partite): {media} gialli a partita ({over35} oltre 3,5 · {over45} oltre 4,5 · {over55} oltre 5,5)</div></div>
+<div class="small info"><span>Aggiornato il {agg} · {fin} partite di quest'anno analizzate</span><button id="tema" class="tema" type="button">Tema chiaro/scuro</button></div><div class="az"><button id="agg" class="agg" type="button">Aggiorna</button><span id="msg"></span></div></header>
+<noscript><div class="note"><b>JavaScript disattivato</b> (succede nelle anteprime di Files, Drive o email): mostro tutte le partite e tutte le sezioni una sotto l'altra. Per avere schede e pulsante Aggiorna apri il file con Safari o Chrome.</div></noscript><nav class="tabs" role="tablist">{nav}</nav>{sez}
 </div><script>{js}</script></body></html>""".format(
         css=CSS, js=JS, anno=sezioni["aggiornato"].year if sezioni["aggiornato"].month >= 7 else sezioni["aggiornato"].year - 1,
         anno2=str((sezioni["aggiornato"].year if sezioni["aggiornato"].month >= 7 else sezioni["aggiornato"].year - 1) + 1)[2:],
