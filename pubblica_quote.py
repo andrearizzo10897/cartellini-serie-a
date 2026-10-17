@@ -6,11 +6,10 @@ quote_daznbet.json; il workflow online le legge da lì al prossimo aggiornamento
 Di solito non serve lanciarlo a mano: lo fanno aggiorna.py (a ogni aggiornamento dal PC) e server.py
 (ogni 30 minuti mentre Avvia è aperto).
 Uso a mano:  python pubblica_quote.py
-Fa un commit solo se le quote sono cambiate o il file ha più di 3 ore.
+Ogni controllo fa un commit con l'orario aggiornato (ora italiana).
 """
 import subprocess
 import sys
-from datetime import timedelta
 
 import config
 from fonti import daznbet
@@ -25,10 +24,7 @@ def git(*args):
 
 def pubblica(nuove):
     """Salva `nuove` (quote scaricate ora) in quote_daznbet.json e le pubblica. Restituisce un messaggio."""
-    vecchie, quando = daznbet.da_file()
-    if vecchie == nuove and quando and config.adesso() - quando < timedelta(hours=3):
-        return "Quote DAZN Bet invariate da meno di 3 ore: niente da pubblicare."
-    daznbet.salva(nuove)
+    daznbet.salva(nuove)  # l'orario cambia a ogni controllo, quindi c'è sempre qualcosa da pubblicare
     git("add", daznbet.FILE.name)
     if not git("status", "--porcelain", "--", daznbet.FILE.name).strip():
         return "Quote DAZN Bet già pubblicate."

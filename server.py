@@ -87,21 +87,19 @@ def _quote_in_background():
     while True:
         time.sleep(1800)
         try:
-            subprocess.run([sys.executable, str(config.BASE / "pubblica_quote.py")], cwd=str(config.BASE),
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=300)
-        except (subprocess.SubprocessError, OSError):
+            _aggiorna()  # riscarica le quote, le pubblica e rigenera anche la pagina locale (con l'orario nuovo)
+        except Exception:  # noqa: BLE001 - un errore di rete non deve fermare il ciclo
             pass
 
 
 def main():
     rete = "--rete" in sys.argv
     threading.Thread(target=_quote_in_background, daemon=True).start()
-    # se la pagina è vecchia (più di 30 minuti) la aggiorno subito
-    if not config.OUTPUT.exists() or time.time() - config.OUTPUT.stat().st_mtime > 1800:
-        print("Aggiorno i dati prima di partire (può servire un minuto)...")
-        ok, msg = _aggiorna()
-        if not ok:
-            print("Attenzione, aggiornamento non riuscito:\n" + msg)
+    # a ogni avvio aggiorno subito: così le quote e il loro orario sono quelli di adesso
+    print("Aggiorno i dati prima di partire (può servire un minuto)...")
+    ok, msg = _aggiorna()
+    if not ok:
+        print("Attenzione, aggiornamento non riuscito:\n" + msg)
     server = ThreadingHTTPServer(("0.0.0.0" if rete else "127.0.0.1", PORTA), Gestore)
     print("Pagina pronta su http://localhost:{}".format(PORTA))
     if rete:
