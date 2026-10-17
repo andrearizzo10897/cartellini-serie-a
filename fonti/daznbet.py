@@ -5,10 +5,15 @@ Serie A -> Sanzioni Giocatori). Una sola richiesta per aggiornamento, senza logi
 non risponde o cambia formato, la pagina resta com'è e mostra "–" al posto della quota.
 """
 import re
+from datetime import datetime
 
 import requests
 
-from utils import senza_accenti, squadra
+import config
+from utils import leggi_json, scrivi_json, senza_accenti, squadra
+
+# Fuori da dati/: il workflow di GitHub ripristina quella cartella da una cache e riporterebbe indietro il file
+FILE = config.BASE / "quote_daznbet.json"
 
 URL = "https://www.daznbet.it/XSportDatastore/getTorneoCentrale"
 PARAMETRI = {"systemCode": "DAZNBET", "lingua": "IT", "hash": "", "sportId": 1,
@@ -46,12 +51,38 @@ def scarica_quote():
     return out
 
 
-def carica():
-    """Quote di tutte le partite, o {} se il sito non risponde (la pagina si genera lo stesso)."""
+def salva(quote, percorso=FILE):
+    """Salva le quote scaricate dal PC (il sito non risponde ai server di GitHub) in un file del repository."""
+    righe = [{"casa": c, "trasf": t, "righe": r} for (c, t), r in quote.items()]
+    scrivi_json(percorso, {"scaricato": config.adesso().isoformat(timespec="minutes"), "partite": righe})
+
+
+def da_file(percorso=FILE):
+    """(quote, data del download) dal file salvato, o ({}, None) se manca o è illeggibile."""
     try:
-        return scarica_quote()
+        dati = leggi_json(percorso)
+        quote = {(p["casa"], p["trasf"]): [(t, s, q) for t, s, q in p["righe"]] for p in dati["partite"]}
+        return quote, datetime.fromisoformat(dati["scaricato"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}, None
+
+
+def carica():
+    """(quote, nota per la pagina). Prima prova il sito; se non risponde (succede da GitHub) usa il file salvato dal PC."""
+    try:
+        quote = scarica_quote()
+        if quote:
+            return quote, None
     except (requests.RequestException, ValueError):
-        return {}
+        pass
+    quote, quando = da_file()
+    if not quote:
+        return {}, "DAZN Bet non ha risposto e non c'è un file di quote salvato: le quote dei giocatori non sono disponibili."
+    ore = (config.adesso() - quando).total_seconds() / 3600
+    nota = "Quote DAZN Bet scaricate dal PC il {:%d/%m alle %H:%M}.".format(quando)
+    if ore > 6:
+        nota += " Sono vecchie di {:.0f} ore: controllale sul sito prima di giocare.".format(ore)
+    return quote, nota
 
 
 def associa(quote_partita, sq, giocatori):

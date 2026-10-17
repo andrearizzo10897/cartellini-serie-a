@@ -87,9 +87,9 @@ def main():
     giocatori_espn, ultima_formazione = calcoli.aggrega_espn(finite)
     poisson, stato_modello = calcoli.prepara_modello(df)
     modello_presenza = presenza.ModelloPresenza(dettagli, stagione_corrente=anno)
-    quote_giocatori = daznbet.carica()
-    if not quote_giocatori:
-        stato.append("DAZN Bet non ha risposto: le quote dei giocatori non sono disponibili in questo aggiornamento.")
+    quote_giocatori, nota_quote = daznbet.carica()
+    if nota_quote:
+        stato.append(nota_quote)
     ctx = {
         "quote_giocatori": quote_giocatori,
         "anno": anno, "df": df, "lungo": lungo, "tabelle": tabelle, "designazioni": designazioni,

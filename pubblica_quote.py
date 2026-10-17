@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Scarica le quote DAZN Bet dal PC e le pubblica su GitHub, così compaiono anche nella pagina online.
+
+I server di GitHub non riescono a leggere il sito di DAZN Bet, quindi le scarica questo PC e le salva in
+quote_daznbet.json; il workflow online le legge da lì al prossimo aggiornamento (entro 20 minuti).
+Uso:  python pubblica_quote.py        (da lanciare ogni tanto, o a intervalli con l'Utilità di pianificazione)
+Fa un commit solo se le quote sono cambiate o il file ha più di 3 ore.
+"""
+import subprocess
+import sys
+from datetime import timedelta
+
+import config
+from fonti import daznbet
+
+
+def git(*args):
+    r = subprocess.run(["git", *args], cwd=config.BASE, capture_output=True, text=True)
+    if r.returncode:
+        raise RuntimeError("git {}: {}".format(" ".join(args), (r.stderr or r.stdout).strip()))
+    return r.stdout
+
+
+def main():
+    try:
+        nuove = daznbet.scarica_quote()
+    except Exception as e:  # noqa: BLE001 - rete, JSON, formato: in ogni caso non si pubblica nulla
+        print("DAZN Bet non risponde ({}): non pubblico nulla.".format(e))
+        return 1
+    if not nuove:
+        print("Nessuna quota trovata: non pubblico nulla.")
+        return 1
+    vecchie, quando = daznbet.da_file()
+    if vecchie == nuove and quando and config.adesso() - quando < timedelta(hours=3):
+        print("Quote invariate da meno di 3 ore: niente da pubblicare.")
+        return 0
+    daznbet.salva(nuove)
+    git("add", daznbet.FILE.name)
+    if not git("status", "--porcelain", "--", daznbet.FILE.name).strip():
+        return 0
+    git("commit", "-m", "Quote DAZN Bet: {} partite".format(len(nuove)), "--", daznbet.FILE.name)
+    git("push", "origin", "main")  # se GitHub è avanti si ferma qui: niente rebase automatici su un albero con altre modifiche
+    print("Pubblicate le quote di {} partite.".format(len(nuove)))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
