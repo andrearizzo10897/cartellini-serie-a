@@ -21,7 +21,8 @@ per ogni giocatore (titolari e panchina) delle prossime partite.
 - `presenza.py` – quanto e quando gioca ciascun giocatore: curva oraria dei gialli, sostituzioni, probabilità di entrare
 - `backtest.py` – verifica il modello sulle partite passate: `python3 backtest.py`
 - `pagina.py` – genera `index.html`
-- `fonti/` – un modulo per ogni sito (football-data, Kickest, Transfermarkt, ESPN, dettagli e arbitri ESPN, AIA, API-Football, allenatori)
+- `fonti/` – un modulo per ogni sito (football-data, Kickest, Transfermarkt, ESPN, dettagli e arbitri ESPN, AIA, API-Football, allenatori,
+  DAZN Bet: quota «giocatore ammonito» di ogni giocatore, con valore atteso accanto a P(giallo); se il sito non risponde la colonna resta «–»)
 - `dati/` – dati salvati (cache + `designazioni.json`, lo storico degli arbitri che cresce da solo)
 - `.env` – chiave API-Football (non condividerla fuori dalla cerchia di fiducia)
 

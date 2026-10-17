@@ -18,8 +18,8 @@ import calcoli  # noqa: E402
 import presenza  # noqa: E402
 import config  # noqa: E402
 import pagina  # noqa: E402
-from fonti import (aia, api_football, arbitri_espn, espn, espn_dettaglio, football_data, kickest,  # noqa: E402
-                   transfermarkt)
+from fonti import (aia, api_football, arbitri_espn, daznbet, espn, espn_dettaglio, football_data,  # noqa: E402
+                   kickest, transfermarkt)
 
 GIORNI_AVANTI = 8  # quanti giorni di calendario mostrare
 
@@ -87,7 +87,11 @@ def main():
     giocatori_espn, ultima_formazione = calcoli.aggrega_espn(finite)
     poisson, stato_modello = calcoli.prepara_modello(df)
     modello_presenza = presenza.ModelloPresenza(dettagli, stagione_corrente=anno)
+    quote_giocatori = daznbet.carica()
+    if not quote_giocatori:
+        stato.append("DAZN Bet non ha risposto: le quote dei giocatori non sono disponibili in questo aggiornamento.")
     ctx = {
+        "quote_giocatori": quote_giocatori,
         "anno": anno, "df": df, "lungo": lungo, "tabelle": tabelle, "designazioni": designazioni,
         "aia_risolte": aia_risolte, "poisson": poisson, "stato_modello": stato_modello,
         "rapporto_var": 1.0,  # i gialli totali seguono una Poisson (backtest: la dispersione extra non migliora)

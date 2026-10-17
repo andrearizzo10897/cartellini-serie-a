@@ -6,6 +6,7 @@ import pandas as pd
 
 import modello
 from config import FORMA_BREVE, FORMA_LUNGA, MINUTI_PRIOR, PESO_STAGIONE
+from fonti import daznbet
 from utils import e_derby, nome_squadra, senza_accenti
 
 SOGLIE = [3.5, 4.5, 5.5]
@@ -499,6 +500,7 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
             pg = ctx["profili"].profilo(g["id"], g["nome"], sq, g["ruolo_espn"])
             (titolari if g["titolare"] else panchina).append(pg)
         riconcilia_squadra(titolari, panchina, sq, atteso_sq, ctx["presenza"])
+        daznbet.associa(ctx.get("quote_giocatori", {}).get((casa, trasf)), sq, titolari + panchina)
         ordine = {"P": 0, "D": 1, "C": 2, "A": 3}
         titolari.sort(key=lambda p: (ordine.get(p["ruolo"], 9), -p["p_giallo"]))
         panchina.sort(key=lambda p: -p["p_giallo"])

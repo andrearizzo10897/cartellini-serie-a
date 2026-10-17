@@ -206,6 +206,16 @@ def quando(dt):
 
 
 # ---- Partite ---------------------------------------------------------------------------------
+def cella_book(p):
+    """Quota DAZN Bet per "ammonito" e valore atteso (probabilità stimata x quota - 1)."""
+    q = p.get("quota_book")
+    if not q:
+        return td("", "–")
+    ev = p["p_giallo"] * q - 1
+    return td(q, '<b>{}</b><span class="q{}" title="Valore atteso di una puntata: probabilità stimata x quota - 1">{}{}%</span>'.format(
+        n(q, 2), " p-alta" if ev > 0 else "", "+" if ev > 0 else "", n(ev * 100, 0)))
+
+
 def righe_giocatori(lista, panchina):
     out = []
     for p in sorted(lista, key=lambda x: -x["p_giallo"]) if panchina else lista:
@@ -225,6 +235,7 @@ def righe_giocatori(lista, panchina):
         celle.append('<td data-v="{}"{}>{}</td>'.format(p["p_giallo"], alto,
                                                          barra(p["p_giallo"], 0.5, con_quota(p["p_giallo"], 1),
                                                                livello(p["p_giallo"], 0.08, 0.15))))
+        celle.append(cella_book(p))
         out.append("<tr>" + "".join(celle) + "</tr>")
     return "".join(out)
 
@@ -234,10 +245,11 @@ def tabella_squadra(sq):
          '<table class="ord"><thead><tr><th>Giocatore</th><th class="nm" title="Gialli ogni 90 minuti (pesati sulle ultime stagioni)">Gialli/90</th>'
          '<th class="det">Falli/90</th><th class="det">Contrasti/90</th><th class="nm" title="Gialli presi in questa stagione">Gialli 26/27</th>'
          '<th class="nm" title="Probabilità di essere sostituito prima della fine: meno minuti in campo, meno rischio">Sostituito</th>'
-         '<th title="Probabilità di essere ammonito in questa partita">P(giallo)</th></tr></thead><tbody>'
+         '<th title="Probabilità di essere ammonito in questa partita">P(giallo)</th>'
+         '<th title="Quota DAZN Bet per «giocatore ammonito» e valore atteso rispetto alla probabilità stimata">DAZN Bet</th></tr></thead><tbody>'
          ).format(escape(sq["nome"]), n(sq["atteso"], 2),
                   ' <span class="small">· modulo {}</span>'.format(escape(sq["formazione"])) if sq["formazione"] else "")
-    t += "<tr class=\"sep\"><td colspan=\"7\">Titolari</td></tr>" + righe_giocatori(sq["titolari"], False)
+    t += "<tr class=\"sep\"><td colspan=\"8\">Titolari</td></tr>" + righe_giocatori(sq["titolari"], False)
     t += "</tbody></table></div>"
     if sq["panchina"]:
         t += ('<details class="panchina"><summary>Panchina · {} giocatori (probabilità di entrare e di essere ammoniti)</summary>'
@@ -245,7 +257,8 @@ def tabella_squadra(sq):
               '<th class="nm">Gialli/90</th><th class="det">Falli/90</th><th class="det">Contrasti/90</th><th class="nm">Gialli 26/27</th>'
               '<th title="Probabilità di entrare, stimata da quante volte è entrato in stagione">P(entra)</th>'
               '<th class="nm" title="Probabilità di giallo se entra (circa 25 minuti)">Se entra</th>'
-              '<th title="P(entra) x P(giallo se entra)">P(giallo)</th></tr></thead><tbody>')
+              '<th title="P(entra) x P(giallo se entra)">P(giallo)</th>'
+              '<th title="Quota DAZN Bet per «giocatore ammonito» e valore atteso rispetto alla probabilità stimata">DAZN Bet</th></tr></thead><tbody>')
         t += righe_giocatori(sq["panchina"], True) + "</tbody></table></div></details>"
         t = t.replace("<summary>Panchina · {} giocatori", "<summary>Panchina · {} giocatori".format(len(sq["panchina"])), 1)
     return t + "</div>"
@@ -311,7 +324,8 @@ def scheda_partita(i, p):
         '{rischio}'
         '<details><summary class="small">Come leggere le percentuali e le quote</summary><p class="legenda">La probabilità stimata combina le squadre, '
         'le quote dei bookmaker, l\'arbitro e il tipo di partita. Sotto ogni percentuale c\'è la <b>quota minima conveniente</b> (1 diviso la '
-        'probabilità): conviene giocare solo se il bookmaker paga di più. I colori vanno dal grigio-blu (probabilità bassa) all\'arancio (alta). '
+        'probabilità): conviene giocare solo se il bookmaker paga di più. Nelle tabelle dei giocatori la colonna <b>DAZN Bet</b> mostra la quota '
+        'reale per «giocatore ammonito» e, sotto, il valore atteso (probabilità stimata x quota - 1): in verde-arancio se positivo. I colori vanno dal grigio-blu (probabilità bassa) all\'arancio (alta). '
         'Le colonne \u00abSerie A\u00bb, \u00abTipo\u00bb e \u00abArbitro\u00bb sono frequenze reali nello storico (ultime 380 partite, quelle dello stesso tipo, quelle dello stesso arbitro), utili per confronto.</p></details>'
         '<div class="cols" style="margin-top:12px">{t1}{t2}</div>'
     ).format(arb=arb, att=n(p["atteso"]), casa=casa, trasf=trasf, ac=n(p["squadre"][0]["atteso"]), at=n(p["squadre"][1]["atteso"]),
