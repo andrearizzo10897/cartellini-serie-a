@@ -68,21 +68,22 @@ def da_file(percorso=FILE):
 
 
 def carica():
-    """(quote, nota per la pagina). Prima prova il sito; se non risponde (succede da GitHub) usa il file salvato dal PC."""
+    """(quote, nota per la pagina, quando sono state scaricate). Prima prova il sito; se non risponde (succede da GitHub)
+    usa il file salvato dal PC."""
     try:
         quote = scarica_quote()
         if quote:
-            return quote, None
+            return quote, None, config.adesso()
     except (requests.RequestException, ValueError):
         pass
     quote, quando = da_file()
     if not quote:
-        return {}, "DAZN Bet non ha risposto e non c'è un file di quote salvato: le quote dei giocatori non sono disponibili."
+        return {}, "DAZN Bet non ha risposto e non c'è un file di quote salvato: le quote dei giocatori non sono disponibili.", None
     ore = (config.adesso() - quando).total_seconds() / 3600
     nota = "Quote DAZN Bet scaricate dal PC il {:%d/%m alle %H:%M}.".format(quando)
     if ore > 6:
         nota += " Sono vecchie di {:.0f} ore: controllale sul sito prima di giocare.".format(ore)
-    return quote, nota
+    return quote, nota, quando
 
 
 def associa(quote_partita, sq, giocatori):

@@ -89,7 +89,7 @@ def main():
     giocatori_espn, ultima_formazione = calcoli.aggrega_espn(finite)
     poisson, stato_modello = calcoli.prepara_modello(df)
     modello_presenza = presenza.ModelloPresenza(dettagli, stagione_corrente=anno)
-    quote_giocatori, nota_quote = daznbet.carica()
+    quote_giocatori, nota_quote, quote_ora = daznbet.carica()
     if nota_quote:
         stato.append(nota_quote)
     elif quote_giocatori and not os.environ.get("GITHUB_ACTIONS"):
@@ -99,7 +99,7 @@ def main():
         except RuntimeError as e:
             print("    quote DAZN Bet non pubblicate online: {}".format(e))
     ctx = {
-        "quote_giocatori": quote_giocatori,
+        "quote_giocatori": quote_giocatori, "quote_ora": quote_ora,
         "anno": anno, "df": df, "lungo": lungo, "tabelle": tabelle, "designazioni": designazioni,
         "aia_risolte": aia_risolte, "poisson": poisson, "stato_modello": stato_modello,
         "rapporto_var": 1.0,  # i gialli totali seguono una Poisson (backtest: la dispersione extra non migliora)

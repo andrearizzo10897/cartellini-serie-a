@@ -1,6 +1,8 @@
 """Genera index.html: una pagina sola, senza librerie esterne (funziona anche offline)."""
 from html import escape
 
+from config import adesso
+from fonti import stemmi
 from utils import nome_squadra
 
 GIORNI = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
@@ -97,13 +99,14 @@ box-shadow:0 2px 6px rgba(0,0,0,.2)}
 .strip{position:relative;margin:6px 0 12px}
 .tiles{display:flex;gap:6px;overflow-x:auto;scroll-behavior:smooth;scrollbar-width:none;padding:2px 0}
 .tiles::-webkit-scrollbar{display:none}
-.chip.tile{flex:0 0 200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:86px;
+.chip.tile{flex:0 0 200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:100px;
 border:0;border-radius:6px;padding:10px 8px;color:#fff;text-align:center;box-shadow:var(--ombra);
 background:linear-gradient(160deg,#2c3568 0 68%,#8a93bd 68% 100%)}
 .chip.tile.lv-medio{background:linear-gradient(160deg,#2c3568 0 68%,#d9b84a 68% 100%)}
 .chip.tile.lv-alto{background:linear-gradient(160deg,#2c3568 0 68%,#e8854a 68% 100%)}
 .tile .t-data{font-size:13px;font-weight:500}
-.tile .t-sq{font-size:15px;font-weight:800;text-transform:uppercase;line-height:1.15}
+.tile .t-sq{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:15px;font-weight:800;text-transform:uppercase;line-height:1.15}
+.t-riga{display:flex;align-items:center;justify-content:center;gap:6px}
 .chip.tile[aria-selected=true]{color:var(--giallo);box-shadow:0 0 0 3px var(--giallo)}
 .freccia{position:absolute;top:2px;bottom:2px;width:32px;border:0;background:var(--accent);color:#fff;font-size:24px;line-height:1;cursor:pointer;
 box-shadow:0 0 8px rgba(0,0,0,.3)}
@@ -123,6 +126,11 @@ box-shadow:0 0 8px rgba(0,0,0,.3)}
 header .az{display:none}
 .cambio{display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--ink2);line-height:1.25}.cambio b{color:var(--ink)}
 .cambio .poco{color:var(--ink3);font-style:italic}
+.stemma{display:inline-block;flex:none;width:20px;height:20px;background-size:contain;background-position:center;background-repeat:no-repeat;vertical-align:middle;margin-right:6px}
+.t-riga .stemma{width:24px;height:24px;margin-right:0}
+.mp-testa h2 .stemma{width:34px;height:34px;margin:0 8px 0 0;vertical-align:-10px}
+.cols h3 .stemma{width:30px;height:30px;vertical-align:-9px}
+.sep-ora{float:right;font-weight:400;color:var(--ink3)}
 html{-webkit-text-size-adjust:100%}
 @media (max-width:640px){
 body{padding:0 max(10px,env(safe-area-inset-left)) 0 max(10px,env(safe-area-inset-right));font-size:15px}
@@ -311,8 +319,22 @@ def righe_giocatori(lista, panchina):
     return "".join(out)
 
 
+_stemmi_ok = set()   # id ESPN delle squadre di cui è stato incorporato lo stemma (riempito da genera)
+
+
+def stemma_html(id_squadra):
+    return '<span class="stemma st{}"></span>'.format(id_squadra) if id_squadra and str(id_squadra) in _stemmi_ok else ""
+
+
+def ora_quote(dt):
+    """'alle 11:56' se di oggi, altrimenti 'il 16/10 alle 11:56'."""
+    if dt.date() == adesso().date():
+        return "alle {:%H:%M}".format(dt)
+    return "il {:%d/%m} alle {:%H:%M}".format(dt, dt)
+
+
 def tabella_squadra(sq):
-    t = ('<div class="card"><h3><span class="lato">{lato}</span>{} <span class="muted">· gialli attesi {}</span>{}</h3><div class="scroll">'
+    t = ('<div class="card"><h3><span class="lato">{lato}</span>{stemma}{} <span class="muted">· gialli attesi {}</span>{}</h3><div class="scroll">'
          '<table class="ord"><thead><tr><th>Giocatore</th><th class="nm" title="Gialli ogni 90 minuti (pesati sulle ultime stagioni)">Gialli/90</th>'
          '<th class="det">Falli/90</th><th class="det">Contrasti/90</th><th class="nm" title="Gialli presi in questa stagione">Gialli 26/27</th>'
          '<th class="nm" title="Probabilità di essere sostituito prima della fine: meno minuti in campo, meno rischio">Sostituito</th>'
@@ -320,8 +342,10 @@ def tabella_squadra(sq):
          '<th title="Quota DAZN Bet per «giocatore ammonito» e valore atteso rispetto alla probabilità stimata">DAZN Bet</th></tr></thead><tbody>'
          ).format(escape(sq["nome"]), n(sq["atteso"], 2),
                   ' <span class="small">· modulo {}</span>'.format(escape(sq["formazione"])) if sq["formazione"] else "",
-                  lato="CASA" if sq["lato"] == "home" else "OSPITE")
-    t += "<tr class=\"sep\"><td colspan=\"8\">Titolari</td></tr>" + righe_giocatori(sq["titolari"], False)
+                  lato="CASA" if sq["lato"] == "home" else "OSPITE", stemma=stemma_html(sq.get("id_stemma")))
+    ora = ('<span class="sep-ora" title="Quando sono state scaricate le quote DAZN Bet">quote DAZN Bet aggiornate {}</span>'.format(
+        ora_quote(sq["quote_ora"])) if sq.get("quote_ora") else "")
+    t += "<tr class=\"sep\"><td colspan=\"8\">Titolari{}</td></tr>".format(ora) + righe_giocatori(sq["titolari"], False)
     t += "</tbody></table></div>"
     if sq["panchina"]:
         t += ('<details class="panchina"><summary>Panchina · {} giocatori (probabilità di entrare e di essere ammoniti)</summary>'
@@ -379,10 +403,11 @@ def scheda_partita(i, p):
                 livello(pg, 0.08, 0.15), pct(pg, 0), escape(nome), escape(sq), " · panchina" if panc else "")
             for pg, nome, sq, panc in candidati[:6]) + "</div>"
     # testata della partita scelta: squadre, orario, formazioni e, a destra, gialli attesi con barretta e over
-    testa = ('<h2>{c} – {t}</h2><span class="s-quando">{q}</span>{b}'
+    testa = ('<h2>{sc}{c} – {st}{t}</h2><span class="s-quando">{q}</span>{b}'
              '<span class="s-stat"><span><b>{a}</b> gialli attesi</span><span class="mini"><i style="width:{w:.0f}%"></i></span>'
              '<span class="nm">{o}</span></span>').format(
-        c=casa, t=trasf, q=quando(ev["inizio"]), b=badge, a=n(p["atteso"]), w=max(0, min(100, p["atteso"] / 6.0 * 100)), o=over_breve)
+        c=casa, t=trasf, q=quando(ev["inizio"]), b=badge, a=n(p["atteso"]), w=max(0, min(100, p["atteso"] / 6.0 * 100)), o=over_breve,
+        sc=stemma_html(ev.get("id_casa")), st=stemma_html(ev.get("id_trasf")))
     corpo = (
         '<div class="kpis">{arb}'
         '<div class="kpi"><span>Gialli attesi (totale)</span><b>{att}</b><span>{casa}: {ac} · {trasf}: {at}<br>senza arbitro e tipo: {base}</span></div>'
@@ -413,9 +438,11 @@ def tessera(i, p):
     dt = ev["inizio"]
     lv = "lv-alto" if p["atteso"] >= 4.0 else ("lv-medio" if p["atteso"] >= 3.6 else "")
     return ('<button type="button" class="chip tile {}" data-match="{}" data-match-gruppo="match" aria-selected="{}">'
-            '<span class="t-data">{} {} | {:02d}:{:02d}</span><span class="t-sq">{}<br>{}</span></button>').format(
+            '<span class="t-data">{} {} | {:02d}:{:02d}</span><span class="t-sq"><span class="t-riga">{}{}</span>'
+            '<span class="t-riga">{}{}</span></span></button>').format(
         lv, i, "true" if i == 0 else "false", dt.day, MESI[dt.month - 1], dt.hour, dt.minute,
-        escape(nome_squadra(ev["casa"])), escape(nome_squadra(ev["trasf"])))
+        stemma_html(ev.get("id_casa")), escape(nome_squadra(ev["casa"])),
+        stemma_html(ev.get("id_trasf")), escape(nome_squadra(ev["trasf"])))
 
 
 def riepilogo_giornata(partite):
@@ -571,7 +598,9 @@ arrivato), distribuzioni più complesse di Poisson e lo storico arbitri di Trans
 
 
 def genera(partite, sezioni, percorso):
+    global _stemmi_ok
     lega = sezioni["lega"]
+    css_stemmi, _stemmi_ok = stemmi.css([x for p in partite for x in (p["ev"].get("id_casa"), p["ev"].get("id_trasf"))])
     pannelli = "".join(scheda_partita(i, p) for i, p in enumerate(partite))
     if not partite:
         pannelli = '<div class="card">Nessuna partita in programma nei prossimi giorni.</div>'
@@ -607,7 +636,7 @@ def genera(partite, sezioni, percorso):
 <div class="small info"><span>Aggiornato il {agg} · {fin} partite di quest'anno analizzate</span><button id="tema" class="tema" type="button">Tema chiaro/scuro</button></div><div class="az"><button id="agg" class="agg" type="button">Aggiorna</button><span id="msg"></span></div></header>
 <noscript><div class="note"><b>JavaScript disattivato</b> (succede nelle anteprime di Files, Drive o email): mostro tutte le partite e tutte le sezioni una sotto l'altra. Per avere schede e pulsante Aggiorna apri il file con Safari o Chrome.</div></noscript><nav class="tabs" role="tablist">{nav}</nav>{sez}
 </div><script>{js}</script></body></html>""".format(
-        css=CSS, js=JS, anno=sezioni["aggiornato"].year if sezioni["aggiornato"].month >= 7 else sezioni["aggiornato"].year - 1,
+        css=CSS + css_stemmi, js=JS, anno=sezioni["aggiornato"].year if sezioni["aggiornato"].month >= 7 else sezioni["aggiornato"].year - 1,
         anno2=str((sezioni["aggiornato"].year if sezioni["aggiornato"].month >= 7 else sezioni["aggiornato"].year - 1) + 1)[2:],
         media=n(lega["gialli"]), over35=pct(lega["over"][3.5]), over45=pct(lega["over"][4.5]), over55=pct(lega["over"][5.5]),
         agg=sezioni["aggiornato"].strftime("%d/%m/%Y alle %H:%M"), fin=sezioni["partite_giocate"], note=note, nav=nav, sez=sez)

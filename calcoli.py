@@ -530,8 +530,11 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
         ordine = {"P": 0, "D": 1, "C": 2, "A": 3}
         titolari.sort(key=lambda p: (ordine.get(p["ruolo"], 9), -p["p_giallo"]))
         panchina.sort(key=lambda p: -p["p_giallo"])
+        con_quote = (casa, trasf) in ctx.get("quote_giocatori", {})
         squadre.append({"nome": nome_squadra(sq), "lato": lato, "formazione": f["formazione"] if f else None,
-                        "atteso": atteso_sq, "titolari": titolari, "panchina": panchina})
+                        "atteso": atteso_sq, "titolari": titolari, "panchina": panchina,
+                        "quote_ora": ctx.get("quote_ora") if con_quote else None,
+                        "id_stemma": ev.get("id_casa" if lato == "home" else "id_trasf")})
     return {"ev": ev, "ufficiale": e_ufficiale, "arbitro": arbitro, "arbitro_aia": arbitro_aia,
             "info_arbitro": info_arb, "f_arb": f_arb, "tipo": tipo, "f_tipo": f_tipo,
             "atteso": totale, "atteso_base": e_c + e_t, "soglie": soglie, "squadre": squadre}

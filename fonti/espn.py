@@ -58,6 +58,7 @@ def partite_del_giorno(giorno):
             "inizio": _ora_locale(e["date"]),
             "casa": squadra(casa["team"]["displayName"]),
             "trasf": squadra(trasf["team"]["displayName"]),
+            "id_casa": str(casa["team"].get("id", "")), "id_trasf": str(trasf["team"].get("id", "")),  # per gli stemmi
             "stato": e["status"]["type"]["state"],  # pre / in / post
             "gol_c": casa.get("score"), "gol_t": trasf.get("score"),
             "quote": _quote(e["competitions"][0].get("odds")),
