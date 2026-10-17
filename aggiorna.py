@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Aggiorna i dati e rigenera index.html.
 
 Uso:   python3 aggiorna.py            (aggiorna tutto e rigenera la pagina)
@@ -21,7 +21,7 @@ import config  # noqa: E402
 import pagina  # noqa: E402
 import pubblica_quote  # noqa: E402
 from fonti import (aia, api_football, arbitri_espn, daznbet, espn, espn_dettaglio, football_data,  # noqa: E402
-                   kickest, transfermarkt)
+                   kickest, sky, transfermarkt)
 
 GIORNI_AVANTI = 8  # quanti giorni di calendario mostrare
 
@@ -108,9 +108,16 @@ def main():
     }
 
     partite = []
+    giornata_sky = sky.giornata_corrente() if prossime else None
     for ev in prossime:
         forma = espn.formazioni(ev["id"], ev["stato"])
         e_uff = espn.ufficiale(forma)
+        if not e_uff and ev["inizio"] - config.adesso() < timedelta(hours=5):
+            # ESPN è in ritardo: Sky pubblica le ufficiali circa un'ora prima del fischio d'inizio
+            forma_sky = sky.ufficiali(ev, anno, ultima_formazione, giornata_sky)
+            if forma_sky:
+                forma, e_uff = forma_sky, True
+                print("    {} - {}: formazioni ufficiali da Sky".format(ev["casa"], ev["trasf"]))
         if not e_uff:  # formazione non ancora uscita: mostro l'ultima schierata, segnalata come "probabile"
             forma = {}
             for lato, sq in (("home", ev["casa"]), ("away", ev["trasf"])):
