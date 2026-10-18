@@ -8,6 +8,7 @@ Se la pagina non c'è, non è ancora ufficiale o cambia formato, restituisce Non
 import html
 import re
 
+from calcoli import _RUOLO_ESPN
 from config import CACHE
 from fonti import espn
 from utils import fresca, leggi_json, scarica, scrivi_json, senza_accenti
@@ -18,6 +19,8 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0 Safa
 # nomi con cui Sky costruisce gli indirizzi, quando non coincidono con il nostro nome canonico
 ALIAS = {"verona": ["hellas-verona", "verona"]}
 RUOLO = {"G": "P", "D": "D", "M": "C", "F": "A"}
+# soprannomi che Sky usa al posto del cognome ESPN
+SOPRANNOMI = {"pote": "Pedro Goncalves"}
 
 
 def _slug(nome):
@@ -73,7 +76,7 @@ def _trova(nome_sky, rosa, usati, portiere=False):
     """Giocatore della rosa che corrisponde a un nome di Sky (solo cognome, a volte con l'iniziale o due parole).
 
     A parità di nome (due Martínez) vince chi ha il ruolo giusto: il primo della lista di Sky è il portiere."""
-    t = _tok(nome_sky)
+    t = _tok(SOPRANNOMI.get(" ".join(_tok(nome_sky)), nome_sky))
     if not t:
         return None
     migliori = []
@@ -90,6 +93,22 @@ def _trova(nome_sky, rosa, usati, portiere=False):
     # soprannomi ("Kike Perez" per Enrique Pérez): se l'ultima parola è il cognome di un solo giocatore, è lui
     sol = [g for g in rosa if g["id"] not in usati and t[-1] in _tok(g["nome"])[1:]]
     return sol[0] if len(sol) == 1 else None
+
+
+def _per_esclusione(k, modulo, ultima, usati):
+    """Giocatore per lo slot k (Sky elenca portiere, difensori, centrocampisti, attaccanti) tra i titolari
+    dell'ultima partita non ancora assegnati. Solo se ce n'è uno con il ruolo giusto."""
+    cifre = [int(x) for x in modulo.split("-")]
+    ruoli = ["G"] + ["D"] * cifre[0] + ["M"] * sum(cifre[1:-1]) + ["F"] * cifre[-1]
+    if k >= len(ruoli):
+        return None
+    giusto = {"G": "P", "D": "D"}.get(ruoli[k])   # centrocampisti e trequartisti/attaccanti si confondono: ruolo largo
+
+    def ok(g):
+        r = _RUOLO_ESPN.get(g.get("ruolo_espn"), "C")
+        return r == giusto if giusto else r in ("C", "A")
+    candidati = [g for g in ultima if g.get("titolare") and g["id"] not in usati and ok(g)]
+    return candidati[0] if len(candidati) == 1 else None
 
 
 def _rosa(id_squadra):
@@ -126,13 +145,23 @@ def ufficiali(ev, anno, ultima_formazione, giornata=None):
         rosa = {g["id"]: g for g in _rosa(id_sq)}
         rosa.update({g["id"]: g for g in ultima})   # prima chi ha giocato l'ultima, poi il resto della rosa
         tutti = list(rosa.values())
-        usati, titolari = set(), []
+        usati, trovati, mancanti = set(), {}, []
         for k, n in enumerate(nomi):
             g = _trova(n, tutti, usati, portiere=(k == 0))
-            if not g:
-                return None   # un nome non riconosciuto: meglio le altre fonti che una formazione sbagliata
-            usati.add(g["id"])
-            titolari.append(_giocatore(g, True))
+            if g:
+                usati.add(g["id"])
+                trovati[k] = g
+            else:
+                mancanti.append(k)
+        if len(mancanti) == 1:   # un solo nome non riconosciuto (un soprannome): lo ricavo per esclusione
+            g = _per_esclusione(mancanti[0], modulo, ultima, usati)
+            if g:
+                usati.add(g["id"])
+                trovati[mancanti[0]] = g
+                mancanti = []
+        if mancanti:
+            return None   # più nomi non riconosciuti: meglio le altre fonti che una formazione sbagliata
+        titolari = [_giocatore(trovati[k], True) for k in sorted(trovati)]
         panchina = [_giocatore(g, False) for g in (ultima or tutti) if g["id"] not in usati]
         forma[lato] = {"squadra": sq, "formazione": modulo, "giocatori": titolari + panchina}
     return forma
