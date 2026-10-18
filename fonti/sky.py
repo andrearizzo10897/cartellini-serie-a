@@ -98,6 +98,8 @@ def _trova(nome_sky, rosa, usati, portiere=False):
 def _per_esclusione(k, modulo, ultima, usati):
     """Giocatore per lo slot k (Sky elenca portiere, difensori, centrocampisti, attaccanti) tra i titolari
     dell'ultima partita non ancora assegnati. Solo se ce n'è uno con il ruolo giusto."""
+    if not modulo:
+        return None
     cifre = [int(x) for x in modulo.split("-")]
     ruoli = ["G"] + ["D"] * cifre[0] + ["M"] * sum(cifre[1:-1]) + ["F"] * cifre[-1]
     if k >= len(ruoli):
@@ -135,7 +137,12 @@ def ufficiali(ev, anno, ultima_formazione, giornata=None):
     """Formazioni ufficiali di Sky nel formato di espn.formazioni(), o None se non ci sono ancora."""
     giornate = [giornata + d for d in (0, 1, -1)] if giornata else list(range(1, 39))
     testo = _pagina(ev, anno, giornate)
-    estratte = _estrai(testo) if testo else None
+    return da_nomi(ev, ultima_formazione, _estrai(testo) if testo else None)
+
+
+def da_nomi(ev, ultima_formazione, estratte):
+    """Dalle liste di cognomi [(modulo o None, [11 nomi]) casa, trasferta] alla formazione nel formato di ESPN.
+    Serve anche a SosFanta. None se mancano le liste o se più di un nome non si riconosce."""
     if not estratte:
         return None
     forma = {}

@@ -21,7 +21,7 @@ import config  # noqa: E402
 import pagina  # noqa: E402
 import pubblica_quote  # noqa: E402
 from fonti import (aia, api_football, arbitri_espn, daznbet, espn, espn_dettaglio, football_data,  # noqa: E402
-                   kickest, sky, transfermarkt)
+                   kickest, sky, sosfanta, transfermarkt)
 
 GIORNI_AVANTI = 8  # quanti giorni di calendario mostrare
 
@@ -113,11 +113,14 @@ def main():
         forma = espn.formazioni(ev["id"], ev["stato"])
         e_uff = espn.ufficiale(forma)
         if not e_uff and ev["inizio"] - config.adesso() < timedelta(hours=5):
-            # ESPN è in ritardo: Sky pubblica le ufficiali circa un'ora prima del fischio d'inizio
-            forma_sky = sky.ufficiali(ev, anno, ultima_formazione, giornata_sky)
-            if forma_sky:
-                forma, e_uff = forma_sky, True
-                print("    {} - {}: formazioni ufficiali da Sky".format(ev["casa"], ev["trasf"]))
+            # ESPN è in ritardo: Sky e SosFanta pubblicano le ufficiali circa un'ora prima del fischio d'inizio
+            for fonte, cerca in (("Sky", lambda: sky.ufficiali(ev, anno, ultima_formazione, giornata_sky)),
+                                 ("SosFanta", lambda: sosfanta.ufficiali(ev, ultima_formazione))):
+                forma_ext = cerca()
+                if forma_ext:
+                    forma, e_uff = forma_ext, True
+                    print("    {} - {}: formazioni ufficiali da {}".format(ev["casa"], ev["trasf"], fonte))
+                    break
         if not e_uff:  # formazione non ancora uscita: mostro l'ultima schierata, segnalata come "probabile"
             forma = {}
             for lato, sq in (("home", ev["casa"]), ("away", ev["trasf"])):
