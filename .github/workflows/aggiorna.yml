@@ -2,7 +2,7 @@
 name: Aggiorna cartellini
 on:
   schedule:
-    - cron: "*/20 8-22 * * *"   # ogni 20 minuti, dalle 10 alle 24 ora italiana (orario UTC)
+    - cron: "*/10 8-22 * * *"   # richiesto ogni 10 minuti: GitHub ritarda gli avvii programmati, quindi in pratica ogni ~20; dalle 10 alle 24 ora italiana (orario UTC)
   workflow_dispatch: {}          # pulsante "Run workflow" per aggiornare subito a mano
 permissions:
   contents: read
