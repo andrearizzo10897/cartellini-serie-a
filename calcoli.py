@@ -305,7 +305,8 @@ def aggrega_espn(partite_finite):
             f = forma.get(lato)
             if not f:
                 continue
-            ultima[f["squadra"]] = f["giocatori"]
+            if any(g["titolare"] for g in f["giocatori"]):   # ESPN a volte manda una squadra senza giocatori: non cancella la precedente
+                ultima[f["squadra"]] = f["giocatori"]
             for g in f["giocatori"]:
                 d = giocatori.setdefault(g["id"], {"nome": g["nome"], "squadra": f["squadra"], "gialli": 0.0,
                                                    "falli": 0.0, "minuti": 0.0, "presenze": 0, "panchine": 0,
