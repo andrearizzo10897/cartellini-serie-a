@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Aggiorna i dati e rigenera index.html.
 
 Uso:   python3 aggiorna.py            (aggiorna tutto e rigenera la pagina)
@@ -167,8 +167,9 @@ def main():
         if not e_uff and ev["inizio"] - config.adesso() < timedelta(hours=5):
             # ESPN è in ritardo: Sky e SosFanta pubblicano le ufficiali circa un'ora prima del fischio d'inizio
             cercate += 1
-            for fonte, cerca in (("Sky", lambda: sky.ufficiali(ev, anno, ultima_formazione, giornata_sky)),
-                                 ("SosFanta", lambda: sosfanta.ufficiali(ev, ultima_formazione))):
+            dati_sky = sky.carica_pagina(ev, anno, giornata_sky)   # pagina "formazioni": nomi completi, anche dei soprannomi
+            for fonte, cerca in (("Sky", lambda: sky.ufficiali(ev, anno, ultima_formazione, giornata_sky, dati_sky)),
+                                 ("SosFanta", lambda: sosfanta.ufficiali(ev, ultima_formazione, sky.alias(dati_sky)))):
                 forma_ext = cerca()
                 if forma_ext:
                     forma, e_uff = forma_ext, True

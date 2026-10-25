@@ -53,11 +53,14 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
   (deve dare quasi tutte «uguali»; restano 2 partite con gialli mancanti in ESPN stessa: Roma-Atalanta, Genoa-Frosinone).
 - **Giorni letti da ESPN**: tutti i giorni dopo l'ultimo dato di football-data (che ritarda anche di 6 giorni), non solo ieri e oggi.
 - **Ultima formazione**: ESPN a volte manda una squadra senza giocatori (Roma-Genoa 17/10): non deve cancellare l'ultima buona (`aggrega_espn`).
-- **Formazioni ufficiali**, in ordine: ESPN, Sky (`fonti/sky.py`, pagina `.../risultato-gol` della partita, blocco «FORMAZIONI UFFICIALI»),
-  SosFanta (`fonti/sosfanta.py`, articolo «formazioni-ufficiali-casa-trasferta», blocco «LE FORMAZIONI UFFICIALI», senza modulo), poi l'ultima schierata.
-  Solo cognomi: abbinamento alla rosa ESPN (`sky._trova`), con tabella `SOPRANNOMI` (Pote = Pedro Goncalves: da aggiornare a mano), scelta del portiere
-  per il primo nome (due Martinez all'Inter) e, se un solo nome non si riconosce, ricavo per esclusione dal ruolo. Più di un nome ignoto: si scarta la fonte.
-  Sky ha scritto «(3-4-2-1) :» con lo spazio: i test in `tests/` coprono i formati visti; se una fonte cambia, il test fallisce.
+- **Formazioni ufficiali**, in ordine: ESPN, Sky (`fonti/sky.py`), SosFanta (`fonti/sosfanta.py`, articolo «formazioni-ufficiali-casa-trasferta», blocco «LE FORMAZIONI UFFICIALI»,
+  senza modulo), poi l'ultima schierata. Sky ha due pagine: `.../formazioni` (tabella con numero di maglia e link `/atleti/<nome-completo>/<id>` per ogni giocatore;
+  «probabili» con soli titolari, poi «ufficiali» con anche la panchina vera) e `.../risultato-gol` (la diretta, che pubblica per prima gli undici in testo con i soli cognomi).
+  Se la tabella è ufficiale si legge da lì (nomi completi, nessuna ambiguità); altrimenti si usa il testo della diretta e i soprannomi si traducono con i nomi completi
+  della stessa tabella (anche quella probabile) o con `SOPRANNOMI` (Pote = Pedro Gonçalves). Abbinamento alla rosa ESPN: `sky._trova` (cognomi) e `sky._trova_completo`
+  (nome completo; a parità numero di maglia o portiere). **Un nome che non si riconosce con certezza fa scartare la fonte: non si indovina.** Provato e scartato:
+  ricavarlo «per esclusione» tra i titolari abituali (prova su 78 partite con soprannomi finti: se il giocatore è un titolare fisso 99% giusto, ma se ruota sbaglia quasi sempre,
+  e dalle liste non si distingue: precisione complessiva 66% con un solo nome sconosciuto, 33% con due). I test in `tests/` coprono i formati visti (spazio prima dei due punti, ecc.).
 - **Test dei giocatori** (`backtest_giocatori.py`, 78 partite 2026/27, solo dati precedenti): ammoniti previsti 239 contro 255 reali, calibrazione buona per fascia;
   una ricalibrazione logistica NON migliora (leave-one-day-out). Brier 0,0599 contro 0,0605 della media per ruolo: lo storico del singolo aggiunge poco.
   Con le quote (17 partite, 55 ammoniti): modello log-loss 0,266 contro 0,288 del mercato ripulito; campione troppo piccolo per concludere.

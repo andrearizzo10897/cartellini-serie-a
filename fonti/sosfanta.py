@@ -56,8 +56,10 @@ def _estrai(testo, ev):
     return out
 
 
-def ufficiali(ev, ultima_formazione):
-    """Formazioni ufficiali di SosFanta nel formato di espn.formazioni(), o None."""
+def ufficiali(ev, ultima_formazione, tradotti=None):
+    """Formazioni ufficiali di SosFanta nel formato di espn.formazioni(), o None.
+
+    tradotti: nomi completi dei soprannomi, presi dalla pagina "formazioni" di Sky (sky.alias)."""
     url = _link(ev)
     if not url:
         return None
@@ -67,4 +69,4 @@ def ufficiali(ev, ultima_formazione):
         return None
     pulito = re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", " ", r.text)
     testo = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", pulito)))
-    return sky.da_nomi(ev, ultima_formazione, _estrai(testo, ev))
+    return sky.da_nomi(ev, ultima_formazione, _estrai(testo, ev), tradotti)
