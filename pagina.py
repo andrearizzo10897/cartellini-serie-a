@@ -535,8 +535,26 @@ def sezione_tipi(righe):
             "Per il passato uso la classifica finale di quella stagione.</p>")
 
 
+def anni_gialli(lega):
+    """(andamento, elenco) per la frase sul livello della Serie A, con le medie di ogni stagione calcolate dai dati."""
+    per = lega.get("per_stagione") or {}
+    if not per:
+        return "sono calati negli anni", "4,3 a partita nel 2023/24, circa 3,5 oggi"
+    stagioni = sorted(per)
+    parti = []
+    for s in stagioni:
+        media, partite = per[s]
+        nome = "{}/{}".format(s, str(s + 1)[2:])
+        incorso = s == stagioni[-1] and partite < 300     # la stagione in corso non è finita: media parziale
+        parti.append("{}{} {}nel {}".format(n(media, 1), " a partita" if s == stagioni[0] else "", "finora " if incorso else "", nome))
+    elenco = ", ".join(parti[:-1]) + " e " + parti[-1] if len(parti) > 1 else parti[0]
+    calano = all(per[a][0] > per[b][0] for a, b in zip(stagioni, stagioni[1:]))
+    return ("sono calati ogni anno" if calano else "sono cambiati da una stagione all'altra"), elenco
+
+
 def sezione_metodo(lega, tempo):
     t = tempo
+    andamento, elenco_anni = anni_gialli(lega)
     return """
 <div class="card"><h3>In sintesi</h3>
 <p>Per ogni partita il programma risponde a tre domande, nell'ordine: <b>1)</b> quanti gialli prenderà ciascuna squadra;
@@ -546,7 +564,7 @@ evento raro e molto casuale, e nessun modello sa se un arbitro deciderà di fisc
 
 <div class="card"><h3>1. Quanti gialli prenderà ogni squadra</h3><ul>
 <li><b>Livello della Serie A.</b> Si parte dalla media recente di gialli, calcolata in modo che le ultime giornate pesino di più. Conta
-perché i gialli sono calati ogni anno (4,3 a partita nel 2023/24, circa 3,5 oggi): usare lo storico intero farebbe sovrastimare.</li>
+perché i gialli {andamento} ({anni_gialli}): usare lo storico intero farebbe sovrastimare.</li>
 <li><b>Correzione per squadra.</b> Una regressione di Poisson tiene conto di: quanti gialli prende di solito la squadra, quanti ne induce
 l'avversaria, il fattore campo, quanto la partita è equilibrata e chi è favorito secondo le quote dei bookmaker (le partite equilibrate hanno
 più gialli) e i falli che le due squadre commettono e subiscono. Le partite vecchie contano meno (la metà ogni 400 giorni) e le squadre con
@@ -618,6 +636,7 @@ arrivato), distribuzioni più complesse di Poisson e lo storico arbitri di Trans
 <li>Dati usati: {partite_tot} partite storiche, {arb} con arbitro noto.</li></ul></div>""".format(
         partite=t["partite"], primo=t["primo_quarto"] * 100, ultimo=t["ultimo_quarto"] * 100,
         p_p=t["p_uscita"]["P"] * 100, p_d=t["p_uscita"]["D"] * 100, p_c=t["p_uscita"]["C"] * 100, p_a=t["p_uscita"]["A"] * 100,
+        andamento=andamento, anni_gialli=elenco_anni,
         uscita=sum(t["uscita_media"][r] for r in "DCA") / 3.0, cambi=t["cambi"], ingresso=t["ingresso_medio"],
         rischio_sub=t["rischio_subentrato"] * 100, partite_tot=lega["partite"], arb=lega["arbitri_noti"])
 

@@ -34,15 +34,16 @@ def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti,
                     quote_giocatori, nota_quote, quote_ora, n_uff, cercate, partite):
     """[(sito, livello, testo)] per il riquadro "Fonti di questo aggiornamento": livello ok / att (attenzione) / no."""
     fonti = []
+    # football-data ritarda di qualche giorno e le partite mancanti le ricavo da ESPN: la riga serve solo se è davvero ferma
     ritardo = (oggi - ultimo_fd).days
-    testo = "ultimo dato del {:%d/%m}".format(ultimo_fd)
-    if aggiunte:
-        un = aggiunte == 1
-        testo += "; {} più recent{} ricavat{} da ESPN".format(_partite(aggiunte), "e" if un else "i", "a" if un else "e")
-    fonti.append(("football-data.co.uk", "ok" if ritardo <= 4 else "att", testo))
+    if ritardo > 14:
+        fonti.append(("football-data.co.uk", "att", "fermo all'ultimo dato del {:%d/%m}: il modello usa soprattutto ESPN, senza "
+                                                   "le quote storiche".format(ultimo_fd)))
     con_quote = sum(1 for e in prossime if e.get("quote"))
+    non_ancora = " ({} non ancora in football-data)".format(aggiunte) if aggiunte else ""
     fonti.append(("ESPN", "ok" if finite else "no",
-                  "{} finite lette, {} in programma ({} con le quote 1X2)".format(_partite(len(finite)), len(prossime), con_quote)))
+                  "{} finite lette{}, {} in programma ({} con le quote 1X2)".format(
+                      _partite(len(finite)), non_ancora, len(prossime), con_quote)))
     totale = sum(n_uff.values())
     testo = "ufficiali per {} su {} (ESPN {}, Sky {}, SosFanta {})".format(
         _partite(totale), len(prossime), n_uff["ESPN"], n_uff["Sky"], n_uff["SosFanta"])
@@ -194,7 +195,9 @@ def main():
         "lega": {"gialli": float(df.tail(380)["g_tot"].mean()), "partite": len(df),
                  "rapporto_var": ctx["rapporto_var"],
                  "over": {s: calcoli.frequenza_oltre(df.tail(380)["g_tot"], s) for s in calcoli.SOGLIE},
-                 "arbitri_noti": int(df["arbitro"].notna().sum())},
+                 "arbitri_noti": int(df["arbitro"].notna().sum()),
+                 # media di gialli e numero di partite di ogni stagione: serve al testo «Livello della Serie A»
+                 "per_stagione": {int(s): (float(g["g_tot"].mean()), len(g)) for s, g in df.groupby("stagione")}},
         "stato": stato,
         "fonti": fonti,
         "tempo": modello_presenza.riepilogo(),

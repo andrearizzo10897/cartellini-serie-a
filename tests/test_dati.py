@@ -147,6 +147,22 @@ class UltimaFormazione(unittest.TestCase):
         self.assertEqual([x["id"] for x in ultima["roma"]], ["r1"])
 
 
+class TestoLivelloSerieA(unittest.TestCase):
+    """La frase «Livello della Serie A» di Come funziona usa le medie vere di ogni stagione, non numeri scritti a mano."""
+
+    def test_tutte_le_stagioni_con_quella_in_corso_parziale(self):
+        per = {2023: (4.32, 380), 2024: (3.82, 380), 2025: (3.70, 380), 2026: (3.33, 78)}
+        self.assertEqual(pagina.anni_gialli({"per_stagione": per}),
+                         ("sono calati ogni anno", "4,3 a partita nel 2023/24, 3,8 nel 2024/25, 3,7 nel 2025/26 e 3,3 finora nel 2026/27"))
+
+    def test_se_non_calano_ogni_anno_non_lo_dice(self):
+        per = {2023: (4.3, 380), 2024: (3.5, 380), 2025: (3.7, 380)}
+        self.assertEqual(pagina.anni_gialli({"per_stagione": per})[0], "sono cambiati da una stagione all'altra")
+
+    def test_senza_dati_ripiega_sul_testo_fisso(self):
+        self.assertIn("2023/24", pagina.anni_gialli({})[1])
+
+
 class RiepilogoFonti(unittest.TestCase):
     def fonti(self, **kw):
         base = dict(anno=2026, ultimo_fd=datetime(2026, 10, 19).date(), oggi=datetime(2026, 10, 25).date(), aggiunte=8,
@@ -159,14 +175,18 @@ class RiepilogoFonti(unittest.TestCase):
 
     def test_testi_e_livelli(self):
         f = self.fonti()
-        self.assertEqual(f["football-data.co.uk"][0], "att")            # fermo da 6 giorni
-        self.assertIn("8 partite più recenti ricavate da ESPN", f["football-data.co.uk"][1])
-        self.assertIn("78 partite finite lette, 2 in programma (1 con le quote 1X2)", f["ESPN"][1])
+        self.assertNotIn("football-data.co.uk", f)                       # ritardo di 6 giorni: normale, niente avviso
+        self.assertIn("78 partite finite lette (8 non ancora in football-data), 2 in programma (1 con le quote 1X2)", f["ESPN"][1])
         self.assertIn("ufficiali per 1 partita su 2", f["Formazioni ufficiali"][1])
         self.assertIn("per 1 partita vicina al calcio d'inizio", f["Formazioni ufficiali"][1])
         self.assertEqual(f["DAZN Bet"][0], "ok")
         self.assertIn("quote «ammonito» per 1 partita, scaricate alle 18:49", f["DAZN Bet"][1])
         self.assertIn("designati per 1 partita su 2", f["Arbitri (AIA)"][1])
+
+    def test_football_data_ferma_da_piu_di_due_settimane(self):
+        f = self.fonti(ultimo_fd=datetime(2026, 10, 5).date())           # 20 giorni
+        self.assertEqual(f["football-data.co.uk"][0], "att")
+        self.assertIn("fermo all'ultimo dato del 05/10", f["football-data.co.uk"][1])
 
     def test_dazn_non_risponde(self):
         self.assertEqual(self.fonti(quote_giocatori={}, nota_quote=None)["DAZN Bet"][0], "no")
