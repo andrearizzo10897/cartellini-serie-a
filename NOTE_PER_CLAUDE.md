@@ -45,3 +45,24 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
   (Brier 0,1879 -> 0,1892-0,1915) e gli allenatori appena arrivati non hanno residui diversi da zero. Non ripetere senza nuovi dati.
 - Storico arbitri Transfermarkt prima del 2023: guadagno < 1% (Brier 0,1811 -> 0,1803), non integrato.
 - Siti che bloccano le richieste automatiche e non vanno aggirati: WhoScored, abseits.at, BetExplorer, Goldbet e altri bookmaker.
+
+## Sessione del 25/10/2026: dati, formazioni ufficiali, verifica dei giocatori
+- **Cache ESPN**: `espn.formazioni(id, 'post')` tiene il file per sempre, ma solo se salvato a partita finita (`espn.finita`, stato nell'header).
+  Prima 8 partite su 78 avevano gialli sbagliati (Bologna-Inter 0 invece di 7...: 26 gialli mancanti) perché salvate prima del fischio o durante.
+  `espn_dettaglio` ha ora il campo `finita` e rifà le voci vecchie. Controllo utile: `controllo gialli ESPN vs football-data` stampato da aggiorna.py
+  (deve dare quasi tutte «uguali»; restano 2 partite con gialli mancanti in ESPN stessa: Roma-Atalanta, Genoa-Frosinone).
+- **Giorni letti da ESPN**: tutti i giorni dopo l'ultimo dato di football-data (che ritarda anche di 6 giorni), non solo ieri e oggi.
+- **Ultima formazione**: ESPN a volte manda una squadra senza giocatori (Roma-Genoa 17/10): non deve cancellare l'ultima buona (`aggrega_espn`).
+- **Formazioni ufficiali**, in ordine: ESPN, Sky (`fonti/sky.py`, pagina `.../risultato-gol` della partita, blocco «FORMAZIONI UFFICIALI»),
+  SosFanta (`fonti/sosfanta.py`, articolo «formazioni-ufficiali-casa-trasferta», blocco «LE FORMAZIONI UFFICIALI», senza modulo), poi l'ultima schierata.
+  Solo cognomi: abbinamento alla rosa ESPN (`sky._trova`), con tabella `SOPRANNOMI` (Pote = Pedro Goncalves: da aggiornare a mano), scelta del portiere
+  per il primo nome (due Martinez all'Inter) e, se un solo nome non si riconosce, ricavo per esclusione dal ruolo. Più di un nome ignoto: si scarta la fonte.
+  Sky ha scritto «(3-4-2-1) :» con lo spazio: i test in `tests/` coprono i formati visti; se una fonte cambia, il test fallisce.
+- **Test dei giocatori** (`backtest_giocatori.py`, 78 partite 2026/27, solo dati precedenti): ammoniti previsti 239 contro 255 reali, calibrazione buona per fascia;
+  una ricalibrazione logistica NON migliora (leave-one-day-out). Brier 0,0599 contro 0,0605 della media per ruolo: lo storico del singolo aggiunge poco.
+  Con le quote (17 partite, 55 ammoniti): modello log-loss 0,266 contro 0,288 del mercato ripulito; campione troppo piccolo per concludere.
+- **Quote DAZN Bet «ammonito»**: margine enorme (1/q medio ~20% contro 8-11% reale): puntando su tutti si perde il 46-58%. Valore atteso > 0 rarissimo (8 su 644).
+- **Workflow su GitHub**: i cron `*/10` e `*/20` rendono lo stesso, ~2 avvii all'ora (25-31 al giorno), mediana 32 minuti. Non è un problema di orario:
+  GitHub scarta gli avvii programmati. L'unico modo per avere di più è lanciarlo da fuori (workflow_dispatch con un token) – non fatto.
+  Un giro dura circa 1-2 minuti. Nella pagina online non c'è alcun token (il pulsante Aggiorna è solo nascosto, `.az{display:none}`).
+- Pagina: pillola «Dati di N min fa» (verde < 45 min, gialla fino a 3 h, rossa oltre) con pulsante Ricarica (cache-busting `?r=`), riquadro «Fonti di questo aggiornamento».

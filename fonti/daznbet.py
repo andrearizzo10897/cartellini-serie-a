@@ -32,8 +32,13 @@ def scarica_quote():
     """{(casa, trasf): [(token del nome, squadra, quota), ...]} con i nomi squadra in forma canonica."""
     r = requests.get(URL, params=PARAMETRI, headers=UA, timeout=30)
     r.raise_for_status()
+    return interpreta(r.json())
+
+
+def interpreta(js):
+    """Dal JSON del servizio di DAZN Bet alle quote «giocatore ammonito» di ogni partita (vedi scarica_quote)."""
     out = {}
-    for av in r.json().get("avs", []):
+    for av in js.get("avs", []):
         try:
             casa, trasf = (squadra(x) for x in av["dsl"]["IT"].split(" - ", 1))
         except (KeyError, ValueError):

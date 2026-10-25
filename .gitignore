@@ -4,3 +4,4 @@ dati/cache/
 .DS_Store
 *.zip
 index.html
+.omc/

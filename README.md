@@ -19,10 +19,14 @@ per ogni giocatore (titolari e panchina) delle prossime partite.
 - `calcoli.py` – statistiche e probabilità
 - `modello.py` – modello di Poisson dei gialli di squadra (quote, falli, livello di lega)
 - `presenza.py` – quanto e quando gioca ciascun giocatore: curva oraria dei gialli, sostituzioni, probabilità di entrare
-- `backtest.py` – verifica il modello sulle partite passate: `python3 backtest.py`
+- `backtest.py` – verifica il modello sui gialli di squadra: `python3 backtest.py`
+- `backtest_giocatori.py` – verifica le probabilità dei singoli giocatori (calibrazione) e le confronta con le quote DAZN Bet salvate: `python backtest_giocatori.py`
+- `tests/` – prove automatiche dei lettori (Sky, SosFanta, DAZN Bet, cache ESPN): `python -m unittest` (offline, meno di un secondo; da rifare dopo ogni modifica ai lettori)
 - `pagina.py` – genera `index.html`
 - `fonti/` – un modulo per ogni sito (football-data, Kickest, Transfermarkt, ESPN, dettagli e arbitri ESPN, AIA, API-Football, allenatori,
-  DAZN Bet: quota «giocatore ammonito» di ogni giocatore, con valore atteso accanto a P(giallo); se il sito non risponde la colonna resta «–»)
+  DAZN Bet: quota «giocatore ammonito» di ogni giocatore, con valore atteso accanto a P(giallo); se il sito non risponde la colonna resta «–»;
+  Sky Sport e SosFanta: formazioni ufficiali, di solito prima di ESPN)
+- La scheda «Come funziona» della pagina mostra quale fonte ha risposto a ogni aggiornamento; in alto «Dati di N min fa» avvisa quando la pagina è vecchia.
 - `dati/` – dati salvati (cache + `designazioni.json`, lo storico degli arbitri che cresce da solo)
 - `.env` – chiave API-Football (non condividerla fuori dalla cerchia di fiducia)
 

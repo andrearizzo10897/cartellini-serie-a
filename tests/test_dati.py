@@ -1,0 +1,187 @@
+"""Quote DAZN Bet, cache ESPN e riepilogo delle fonti: nessuna rete (si usano dati finti e cartelle temporanee)."""
+import tempfile
+import unittest
+from datetime import datetime
+from pathlib import Path
+from unittest import mock
+
+import aggiorna
+import calcoli
+import pagina
+from fonti import daznbet, espn
+
+
+class QuoteDaznBet(unittest.TestCase):
+    JS = {"avs": [
+        {"dsl": {"IT": "Venezia - Napoli"}, "scs": [
+            {"d": "GIOCATORE AMMONITO", "dia": "Rrahmani Amir (Napoli)", "eqs": [{"ce": 1, "q": 450}]},
+            {"d": "Giocatore ammonito", "dia": "Lucca Lorenzo (Napoli)", "eqs": [{"ce": 0, "q": 300}, {"ce": 1, "q": 575}]},
+            {"d": "GIOCATORE ESPULSO", "dia": "Meret Alex (Napoli)", "eqs": [{"ce": 1, "q": 3000}]},   # altro mercato
+            {"d": "GIOCATORE AMMONITO", "dia": "Senza Squadra", "eqs": [{"ce": 1, "q": 500}]},          # nessuna squadra
+            {"d": "GIOCATORE AMMONITO", "dia": "Quota Zero (Venezia)", "eqs": [{"ce": 1, "q": 0}]}]},   # sospesa
+        {"dsl": {"IT": "Roma - Genoa"}, "scs": []},                                                       # nessuna quota
+        {"dsl": {}, "scs": []}]}                                                                          # senza titolo
+
+    def test_interpreta_solo_il_mercato_ammonito(self):
+        quote = daznbet.interpreta(self.JS)
+        self.assertEqual(list(quote), [("venezia", "napoli")])
+        righe = quote[("venezia", "napoli")]
+        self.assertEqual(len(righe), 2)
+        self.assertEqual(righe[0], (["rrahmani", "amir"], "napoli", 4.5))
+        self.assertEqual(righe[1][2], 5.75)
+
+    def test_json_vuoto(self):
+        self.assertEqual(daznbet.interpreta({}), {})
+
+    def test_associa_per_nome_e_per_cognome(self):
+        righe = [(["rrahmani", "amir"], "napoli", 4.5), (["lucca", "lorenzo"], "napoli", 5.75),
+                 (["di", "lorenzo", "giovanni"], "napoli", 6.0), (["rrahmani", "x"], "venezia", 9.0)]
+        gioc = [{"nome": "Amir Rrahmani"}, {"nome": "Lorenzo Lucca"}, {"nome": "Di Lorenzo"}, {"nome": "Scott McTominay"}]
+        daznbet.associa(righe, "napoli", gioc)
+        self.assertEqual([x["quota_book"] for x in gioc], [4.5, 5.75, 6.0, None])
+
+    def test_associa_senza_quote(self):
+        gioc = [{"nome": "Amir Rrahmani"}]
+        daznbet.associa(None, "napoli", gioc)
+        self.assertIsNone(gioc[0]["quota_book"])
+
+
+def riassunto(stato, gialli=0, titolari=True):
+    """Dettaglio di una partita nel formato di ESPN (solo i campi che il programma legge)."""
+    def squadra(lato, nome, base):
+        return {"homeAway": lato, "team": {"displayName": nome}, "roster": [
+            {"athlete": {"id": base + i, "fullName": "Giocatore {}".format(base + i)}, "starter": titolari,
+             "subbedIn": False, "subbedOut": False,
+             "stats": [{"name": "yellowCards", "value": gialli if i == 0 else 0}]} for i in range(11)]}
+    return {"header": {"competitions": [{"status": {"type": {"state": stato}}}]},
+            "rosters": [squadra("home", "Roma", 100), squadra("away", "Genoa", 200)]}
+
+
+class Risposta:
+    def __init__(self, js):
+        self.js = js
+
+    def json(self):
+        return self.js
+
+
+class CacheEspn(unittest.TestCase):
+    """Una partita finita resta in cache per sempre, ma solo se il file è stato salvato a partita finita."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        (Path(self.tmp.name) / "espn").mkdir()
+        p = mock.patch.object(espn, "CACHE", Path(self.tmp.name))
+        p.start()
+        self.addCleanup(p.stop)
+
+    def salva(self, js):
+        import json
+        (Path(self.tmp.name) / "espn" / "partita_1.json").write_text(json.dumps(js), encoding="utf-8")
+
+    def gialli(self, forma):
+        return sum(x["gialli"] for lato in forma.values() for x in lato["giocatori"])
+
+    def test_file_salvato_durante_la_partita_si_riscarica(self):
+        self.salva(riassunto("in", gialli=1))
+        with mock.patch.object(espn, "scarica", return_value=Risposta(riassunto("post", gialli=3))) as rete:
+            forma = espn.formazioni("1", "post")
+        self.assertEqual(rete.call_count, 1)
+        self.assertEqual(self.gialli(forma), 6)   # 3 gialli per squadra: il file nuovo ha sostituito il vecchio
+        with mock.patch.object(espn, "scarica") as rete:
+            espn.formazioni("1", "post")          # ora è finito: non si scarica più
+        self.assertEqual(rete.call_count, 0)
+
+    def test_file_salvato_prima_del_fischio_si_riscarica(self):
+        self.salva(riassunto("pre"))
+        with mock.patch.object(espn, "scarica", return_value=Risposta(riassunto("post", gialli=2))) as rete:
+            forma = espn.formazioni("1", "post")
+        self.assertEqual(rete.call_count, 1)
+        self.assertEqual(self.gialli(forma), 4)
+
+    def test_file_finito_non_usa_la_rete(self):
+        self.salva(riassunto("post", gialli=2))
+        with mock.patch.object(espn, "scarica") as rete:
+            forma = espn.formazioni("1", "post")
+        self.assertEqual(rete.call_count, 0)
+        self.assertEqual(self.gialli(forma), 4)
+
+    def test_rete_assente_con_file_vecchio_usa_il_vecchio(self):
+        self.salva(riassunto("in", gialli=1))
+        with mock.patch.object(espn, "scarica", side_effect=OSError("rete")):
+            forma = espn.formazioni("1", "post")
+        self.assertEqual(self.gialli(forma), 2)
+
+    def test_rete_assente_senza_file(self):
+        with mock.patch.object(espn, "scarica", side_effect=OSError("rete")):
+            self.assertEqual(espn.formazioni("1", "post"), {})
+
+    def test_partita_non_finita_resta_in_cache_per_poco(self):
+        self.salva(riassunto("pre"))
+        with mock.patch.object(espn, "scarica") as rete:   # file appena salvato: ancora valido
+            espn.formazioni("1", "pre")
+        self.assertEqual(rete.call_count, 0)
+
+    def test_finita(self):
+        self.assertTrue(espn.finita(riassunto("post")))
+        self.assertFalse(espn.finita(riassunto("in")))
+        self.assertFalse(espn.finita({}))
+
+
+class UltimaFormazione(unittest.TestCase):
+    def forma(self, nomi_titolari):
+        lato = lambda sq, titolari: {"squadra": sq, "formazione": None, "giocatori": [
+            {"id": "{}{}".format(sq, i), "nome": "G{}".format(i), "titolare": titolari, "entrato": False, "uscito": False,
+             "presenze": 0, "gialli": 0, "falli": 0} for i in range(nomi_titolari)]}
+        return lato
+
+    def test_squadra_vuota_di_espn_non_cancella_l_ultima_formazione_buona(self):
+        # ESPN a volte manda una squadra senza giocatori (Roma-Genoa del 17/10): non deve far sparire la formazione di prima
+        pieno = {"home": {"squadra": "roma", "formazione": None, "giocatori": [
+                    {"id": "r1", "nome": "A", "titolare": True, "entrato": False, "uscito": False, "presenze": 0,
+                     "gialli": 0, "falli": 0}]}}
+        vuoto = {"home": {"squadra": "roma", "formazione": None, "giocatori": []}}
+        ev = lambda g: {"inizio": datetime(2026, 10, g, 15, 0)}
+        _, ultima = calcoli.aggrega_espn([(ev(10), pieno), (ev(17), vuoto)])
+        self.assertEqual([x["id"] for x in ultima["roma"]], ["r1"])
+
+
+class RiepilogoFonti(unittest.TestCase):
+    def fonti(self, **kw):
+        base = dict(anno=2026, ultimo_fd=datetime(2026, 10, 19).date(), oggi=datetime(2026, 10, 25).date(), aggiunte=8,
+                    finite=[(None, None)] * 78, prossime=[{"quote": (0.4, 0.3, 0.3)}, {"quote": None}],
+                    mancanti=[], kickest_corrente=False, n_tm=2459, quote_giocatori={("a", "b"): []}, nota_quote=None,
+                    quote_ora=datetime(2026, 10, 25, 18, 49), n_uff={"ESPN": 1, "Sky": 0, "SosFanta": 0}, cercate=1,
+                    partite=[{"arbitro": "X"}, {"arbitro": None}])
+        base.update(kw)
+        return {nome: (livello, testo) for nome, livello, testo in aggiorna.riepilogo_fonti(**base)}
+
+    def test_testi_e_livelli(self):
+        f = self.fonti()
+        self.assertEqual(f["football-data.co.uk"][0], "att")            # fermo da 6 giorni
+        self.assertIn("8 partite più recenti ricavate da ESPN", f["football-data.co.uk"][1])
+        self.assertIn("78 partite finite lette, 2 in programma (1 con le quote 1X2)", f["ESPN"][1])
+        self.assertIn("ufficiali per 1 partita su 2", f["Formazioni ufficiali"][1])
+        self.assertIn("per 1 partita vicina al calcio d'inizio", f["Formazioni ufficiali"][1])
+        self.assertEqual(f["DAZN Bet"][0], "ok")
+        self.assertIn("quote «ammonito» per 1 partita, scaricate alle 18:49", f["DAZN Bet"][1])
+        self.assertIn("designati per 1 partita su 2", f["Arbitri (AIA)"][1])
+
+    def test_dazn_non_risponde(self):
+        self.assertEqual(self.fonti(quote_giocatori={}, nota_quote=None)["DAZN Bet"][0], "no")
+        self.assertEqual(self.fonti(nota_quote="Quote scaricate dal PC alle 10:00.")["DAZN Bet"][0], "att")
+
+    def test_kickest_e_transfermarkt(self):
+        f = self.fonti(mancanti=[2025], n_tm=0)
+        self.assertEqual((f["Kickest"][0], f["Transfermarkt"][0]), ("att", "att"))
+
+    def test_riquadro_html_senza_codice_iniettato(self):
+        html = pagina.sezione_fonti([("Sito", "ok", "testo <script>alert(1)</script>")])
+        self.assertNotIn("<script>", html)
+        self.assertIn("&lt;script&gt;", html)
+        self.assertEqual(pagina.sezione_fonti([]), "")
+
+
+if __name__ == "__main__":
+    unittest.main()

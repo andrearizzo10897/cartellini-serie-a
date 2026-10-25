@@ -1,10 +1,13 @@
 """Genera index.html: una pagina sola, senza librerie esterne (funziona anche offline)."""
 from html import escape
 
+from dateutil import tz
+
 from config import adesso
 from fonti import stemmi
 from utils import nome_squadra
 
+ROMA = tz.gettz("Europe/Rome")
 GIORNI = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
 RUOLI = {"P": "Portiere", "D": "Difensore", "C": "Centrocampista", "A": "Attaccante"}
 
@@ -159,6 +162,15 @@ td.nome{white-space:normal;min-width:120px;max-width:170px}
 .legenda{font-size:12px}
 }
 button.tema{font:inherit;color:#fff;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);border-radius:99px;padding:3px 10px;cursor:pointer}
+.eta{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#fff;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);
+border-radius:99px;padding:3px 10px}
+.eta::before{content:"";width:8px;height:8px;border-radius:50%;background:#4ade80}
+.eta.vecchio::before{background:#fbbf24}.eta.molto::before{background:#f87171}
+.eta:empty{display:none}
+ul.fonti{list-style:none;padding:0;margin:6px 0 0}
+.fonte{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line)}.fonte:first-child{border-top:0}
+.fonte i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--verde);transform:translateY(-1px)}
+.fonte.att i{background:var(--medio)}.fonte.no i{background:var(--rosa)}
 """
 
 JS = """
@@ -211,6 +223,13 @@ var tl=$('.tiles');if(tl){var sx=$('.freccia.sx'),dx=$('.freccia.dx');
 function frecce(){sx.style.display=tl.scrollLeft>5?'block':'none';dx.style.display=tl.scrollLeft+tl.clientWidth<tl.scrollWidth-5?'block':'none'}
 sx.addEventListener('click',function(){tl.scrollBy({left:-420,behavior:'smooth'})});dx.addEventListener('click',function(){tl.scrollBy({left:420,behavior:'smooth'})});
 tl.addEventListener('scroll',frecce);window.addEventListener('resize',frecce);frecce()}
+var eta=$('#eta'),rl=$('#ricarica');
+if(eta){var gen=Date.parse(eta.getAttribute('data-gen'));
+ var tx=function(m){if(m<1)return 'adesso';if(m<60)return m+' min fa';var h=Math.floor(m/60),r=m%60;if(h<48)return h+' h'+(r?' '+r+' min':'')+' fa';return Math.floor(h/24)+' giorni fa'};
+ var ag_eta=function(){if(isNaN(gen)){eta.textContent='';return}var m=Math.max(0,Math.round((Date.now()-gen)/60000));
+  eta.textContent='Dati di '+tx(m);eta.className='eta'+(m>180?' molto':(m>45?' vecchio':''));if(rl)rl.hidden=m<=45};
+ ag_eta();setInterval(ag_eta,60000);document.addEventListener('visibilitychange',ag_eta);window.addEventListener('focus',ag_eta);
+ if(rl)rl.addEventListener('click',function(){if(location.protocol==='file:'){location.reload()}else{location.href=location.pathname+'?r='+Date.now()}})}
 var dt=$('#det');if(dt){dt.addEventListener('change',function(){document.body.classList.toggle('det-on',dt.checked)})}
 var tm=$('#tema');if(tm){tm.addEventListener('click',function(){var d=document.documentElement,c=d.getAttribute('data-theme');
  d.setAttribute('data-theme',c==='dark'?'light':'dark')})}
@@ -580,9 +599,15 @@ tipo, partite dello stesso arbitro.</li></ul></div>
 (<code>backtest.py</code>). Sull'errore delle soglie over (Brier, più basso è meglio): 0,193 con il metodo di partenza, 0,182 con
 questo modello e 0,173 aggiungendo l'arbitro (partite 2025/26 e 2026/27, mai usate per tarare). La sovrastima sistematica dei gialli
 (+0,27 a partita) è sparita.</li>
-<li><b>Giocatori.</b> Sulle 58 partite 2026/27 giocate, con previsioni fatte solo con i dati precedenti: la probabilità di entrare è
-molto più precisa (errore 0,545 contro 0,586) e per i panchinari la stima media è passata dall'1,7% al 2,3%, contro il 2,6% reale.
+<li><b>Giocatori.</b> Al 25/10/2026, sulle 78 partite 2026/27 giocate e rifatte usando solo i dati precedenti a ciascuna, gli
+ammoniti previsti sono 239 contro 255 reali (titolari 11,2% previsto e 11,8% reale, panchinari 2,3% e 2,6%) e anche fascia per fascia di
+probabilità le percentuali tornano. Lo storico del singolo giocatore migliora solo di poco una semplice media per ruolo (errore 0,0599
+contro 0,0605): conta di più il contesto della partita. La probabilità di entrare è molto più precisa (errore 0,545 contro 0,586).
 Il campione è piccolo: sono indicazioni, non prove definitive.</li>
+<li><b>Quote DAZN Bet e valore atteso.</b> Sulle 17 partite di cui ho salvato le quote, le quote «ammonito» implicano in media circa il 20%
+di probabilità contro un 8-11% di ammoniti reali: il margine del bookmaker è altissimo e puntare su tutti i giocatori farebbe perdere
+tra il 46% e il 58% della posta. Il valore atteso positivo è raro (8 casi su 644) e troppo pochi per sapere se funziona: va letto come
+un segnale da controllare, soprattutto per chi è segnato «poco storico».</li>
 <li><b>Provato e scartato</b> perché non migliorava i risultati: l'effetto dell'allenatore (né quello della squadra né quello di chi è appena
 arrivato), distribuzioni più complesse di Poisson e lo storico arbitri di Transfermarkt prima del 2023.</li></ul></div>
 
@@ -597,6 +622,15 @@ arrivato), distribuzioni più complesse di Poisson e lo storico arbitri di Trans
         rischio_sub=t["rischio_subentrato"] * 100, partite_tot=lega["partite"], arb=lega["arbitri_noti"])
 
 
+def sezione_fonti(fonti):
+    """Riquadro "Fonti di questo aggiornamento": per ogni sito un pallino (verde ok, giallo attenzione, rosso non risponde)."""
+    if not fonti:
+        return ""
+    righe = "".join('<li class="fonte {l}"><i></i><span><b>{n}</b> · {t}</span></li>'.format(l=livello, n=escape(nome), t=escape(testo))
+                    for nome, livello, testo in fonti)
+    return '<div class="card"><h3>Fonti di questo aggiornamento</h3><ul class="fonti">{}</ul></div>'.format(righe)
+
+
 def genera(partite, sezioni, percorso):
     global _stemmi_ok
     lega = sezioni["lega"]
@@ -608,9 +642,10 @@ def genera(partite, sezioni, percorso):
     def e_quote(s):
         return s.startswith(("Quote DAZN", "DAZN Bet"))
     note = "".join('<div class="note">{}</div>'.format(escape(s)) for s in sezioni["stato"] if e_quote(s))
+    # con il riquadro "Fonti di questo aggiornamento" le note sulle fonti sarebbero ripetute: restano solo senza
     stato_dati = ('<div class="card"><h3>Stato dei dati</h3>{}</div>'.format(
         "".join('<div class="note">{}</div>'.format(escape(s)) for s in sezioni["stato"] if not e_quote(s)))
-        if any(not e_quote(s) for s in sezioni["stato"]) else "")
+        if not sezioni.get("fonti") and any(not e_quote(s) for s in sezioni["stato"]) else "")
     tabs = [("partite", "Partite"), ("arbitri", "Arbitri"), ("squadre", "Squadre"), ("tipi", "Tipo di partita"), ("metodo", "Come funziona")]
     nav = "".join('<button role="tab" data-tab="{k}" data-tab-gruppo="tab" aria-selected="{s}">{v}</button>'.format(
         k=k, v=v, s="true" if k == "partite" else "false") for k, v in tabs)
@@ -624,7 +659,7 @@ def genera(partite, sezioni, percorso):
         "arbitri": "<h2>Arbitri: gialli e rossi a partita</h2>" + sezione_arbitri(sezioni["arbitri"], lega),
         "squadre": "<h2>Squadre: gialli fatti e subiti</h2>" + sezione_squadre(sezioni["squadre"]),
         "tipi": "<h2>Gialli per tipo di partita</h2>" + sezione_tipi(sezioni["tipi"]),
-        "metodo": stato_dati + sezione_metodo(lega, sezioni["tempo"]),
+        "metodo": sezione_fonti(sezioni.get("fonti")) + stato_dati + sezione_metodo(lega, sezioni["tempo"]),
     }
     sez = "".join('<div data-tab="{k}" data-tab-gruppo="tab" class="{c}">{h}</div>'.format(
         k=k, h=h, c="" if k == "partite" else "hid") for k, h in corpo.items())
@@ -633,11 +668,12 @@ def genera(partite, sezioni, percorso):
 <title>Cartellini Serie A</title><style>{css}</style><noscript><style>.hid{{display:block!important}}nav.tabs,.az,#tema{{display:none!important}}</style></noscript></head>
 <body><div class="wrap">
 <header class="hero"><div class="tit"><h1><span class="logo"></span>Cartellini Serie A</h1><div class="muted">Stagione {anno}/{anno2} · Media Serie A (ultime 380 partite): {media} gialli a partita ({over35} oltre 3,5 · {over45} oltre 4,5 · {over55} oltre 5,5)</div></div>
-<div class="small info"><span>Aggiornato il {agg} · {fin} partite di quest'anno analizzate</span><button id="tema" class="tema" type="button">Tema chiaro/scuro</button></div><div class="az"><button id="agg" class="agg" type="button">Aggiorna</button><span id="msg"></span></div></header>
+<div class="small info"><span>Aggiornato il {agg} · {fin} partite di quest'anno analizzate</span><span id="eta" class="eta" data-gen="{gen}" title="Da quanto tempo sono stati calcolati i dati. La versione online si aggiorna ogni 20-30 minuti circa, dalle 10 a mezzanotte."></span><button id="ricarica" class="tema" type="button" hidden>Ricarica</button><button id="tema" class="tema" type="button">Tema chiaro/scuro</button></div><div class="az"><button id="agg" class="agg" type="button">Aggiorna</button><span id="msg"></span></div></header>
 <noscript><div class="note"><b>JavaScript disattivato</b> (succede nelle anteprime di Files, Drive o email): mostro tutte le partite e tutte le sezioni una sotto l'altra. Per avere schede e pulsante Aggiorna apri il file con Safari o Chrome.</div></noscript><nav class="tabs" role="tablist">{nav}</nav>{sez}
 </div><script>{js}</script></body></html>""".format(
         css=CSS + css_stemmi, js=JS, anno=sezioni["aggiornato"].year if sezioni["aggiornato"].month >= 7 else sezioni["aggiornato"].year - 1,
         anno2=str((sezioni["aggiornato"].year if sezioni["aggiornato"].month >= 7 else sezioni["aggiornato"].year - 1) + 1)[2:],
         media=n(lega["gialli"]), over35=pct(lega["over"][3.5]), over45=pct(lega["over"][4.5]), over55=pct(lega["over"][5.5]),
-        agg=sezioni["aggiornato"].strftime("%d/%m/%Y alle %H:%M"), fin=sezioni["partite_giocate"], note=note, nav=nav, sez=sez)
+        agg=sezioni["aggiornato"].strftime("%d/%m/%Y alle %H:%M"), fin=sezioni["partite_giocate"], note=note, nav=nav, sez=sez,
+        gen=sezioni["aggiornato"].replace(tzinfo=ROMA).isoformat(timespec="seconds"))
     percorso.write_text(html, encoding="utf-8")

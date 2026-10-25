@@ -26,6 +26,51 @@ from fonti import (aia, api_football, arbitri_espn, daznbet, espn, espn_dettagli
 GIORNI_AVANTI = 8  # quanti giorni di calendario mostrare
 
 
+def _partite(n):
+    return "{} partit{}".format(n, "a" if n == 1 else "e")
+
+
+def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti, kickest_corrente, n_tm,
+                    quote_giocatori, nota_quote, quote_ora, n_uff, cercate, partite):
+    """[(sito, livello, testo)] per il riquadro "Fonti di questo aggiornamento": livello ok / att (attenzione) / no."""
+    fonti = []
+    ritardo = (oggi - ultimo_fd).days
+    testo = "ultimo dato del {:%d/%m}".format(ultimo_fd)
+    if aggiunte:
+        un = aggiunte == 1
+        testo += "; {} più recent{} ricavat{} da ESPN".format(_partite(aggiunte), "e" if un else "i", "a" if un else "e")
+    fonti.append(("football-data.co.uk", "ok" if ritardo <= 4 else "att", testo))
+    con_quote = sum(1 for e in prossime if e.get("quote"))
+    fonti.append(("ESPN", "ok" if finite else "no",
+                  "{} finite lette, {} in programma ({} con le quote 1X2)".format(_partite(len(finite)), len(prossime), con_quote)))
+    totale = sum(n_uff.values())
+    testo = "ufficiali per {} su {} (ESPN {}, Sky {}, SosFanta {})".format(
+        _partite(totale), len(prossime), n_uff["ESPN"], n_uff["Sky"], n_uff["SosFanta"])
+    if cercate and not (n_uff["Sky"] or n_uff["SosFanta"]):
+        testo += "; per {} vicin{} al calcio d'inizio Sky e SosFanta non hanno ancora pubblicato".format(
+            _partite(cercate), "a" if cercate == 1 else "e")
+    fonti.append(("Formazioni ufficiali", "ok", testo))
+    if nota_quote:
+        fonti.append(("DAZN Bet", "att", nota_quote))
+    elif quote_giocatori:
+        fonti.append(("DAZN Bet", "ok", "quote «ammonito» per {}, scaricate alle {:%H:%M}".format(
+            _partite(len(quote_giocatori)), quote_ora)))
+    else:
+        fonti.append(("DAZN Bet", "no", "nessuna quota ricevuta"))
+    if mancanti:
+        fonti.append(("Kickest", "att", "non ha risposto per {}".format(", ".join(
+            "{}/{}".format(s, str(s + 1)[2:]) for s in mancanti))))
+    else:
+        fonti.append(("Kickest", "ok", "stagioni passate caricate" + ("" if kickest_corrente else
+                      "; il {}/{} non è ancora pubblicato, per quella in corso uso ESPN".format(anno, str(anno + 1)[2:]))))
+    fonti.append(("Transfermarkt", "ok" if n_tm else "att",
+                  "{} giocatori con storico".format(n_tm) if n_tm else "non ha risposto: uso la media del ruolo"))
+    con_arbitro = sum(1 for p in partite if p["arbitro"])
+    fonti.append(("Arbitri (AIA)", "ok" if con_arbitro else "att",
+                  "designati per {} su {}".format(_partite(con_arbitro), len(partite))))
+    return fonti
+
+
 def main():
     oggi = config.adesso().date()
     anno = config.STAGIONE_CORRENTE
@@ -113,16 +158,20 @@ def main():
 
     partite = []
     giornata_sky = sky.giornata_corrente() if prossime else None
+    n_uff, cercate = {"ESPN": 0, "Sky": 0, "SosFanta": 0}, 0
     for ev in prossime:
         forma = espn.formazioni(ev["id"], ev["stato"])
         e_uff = espn.ufficiale(forma)
+        n_uff["ESPN"] += bool(e_uff)
         if not e_uff and ev["inizio"] - config.adesso() < timedelta(hours=5):
             # ESPN è in ritardo: Sky e SosFanta pubblicano le ufficiali circa un'ora prima del fischio d'inizio
+            cercate += 1
             for fonte, cerca in (("Sky", lambda: sky.ufficiali(ev, anno, ultima_formazione, giornata_sky)),
                                  ("SosFanta", lambda: sosfanta.ufficiali(ev, ultima_formazione))):
                 forma_ext = cerca()
                 if forma_ext:
                     forma, e_uff = forma_ext, True
+                    n_uff[fonte] += 1
                     print("    {} - {}: formazioni ufficiali da {}".format(ev["casa"], ev["trasf"], fonte))
                     break
         if not e_uff:  # formazione non ancora uscita: mostro l'ultima schierata, segnalata come "probabile"
@@ -132,6 +181,11 @@ def main():
                     forma[lato] = {"squadra": sq, "formazione": None, "giocatori": ultima_formazione[sq]}
         partite.append(calcoli.analizza_partita(ev, forma, e_uff, ctx))
 
+    fonti = riepilogo_fonti(
+        anno=anno, ultimo_fd=ultimo_fd, oggi=oggi, aggiunte=aggiunte, finite=finite, prossime=prossime,
+        mancanti=mancanti, kickest_corrente=bool(len(kick[kick["stagione"] == anno])), n_tm=len(tm),
+        quote_giocatori=quote_giocatori, nota_quote=nota_quote, quote_ora=quote_ora,
+        n_uff=n_uff, cercate=cercate, partite=partite)
     squadre_stagione = sorted(set(df[df["stagione"] == anno]["casa"]) | set(df[df["stagione"] == anno]["trasf"]))
     sezioni = {
         "arbitri": calcoli.tabella_arbitri(df, anno),
@@ -142,6 +196,7 @@ def main():
                  "over": {s: calcoli.frequenza_oltre(df.tail(380)["g_tot"], s) for s in calcoli.SOGLIE},
                  "arbitri_noti": int(df["arbitro"].notna().sum())},
         "stato": stato,
+        "fonti": fonti,
         "tempo": modello_presenza.riepilogo(),
         "aggiornato": config.adesso(),
         "partite_giocate": len(finite),
