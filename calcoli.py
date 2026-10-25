@@ -5,7 +5,7 @@ import re
 import pandas as pd
 
 import modello
-from config import FORMA_BREVE, FORMA_LUNGA, MINUTI_PRIOR, PESO_STAGIONE
+from config import FONTE_PRIMARIA, FORMA_BREVE, FORMA_LUNGA, MINUTI_PRIOR, PESO_STAGIONE
 from fonti import daznbet
 from presenza import SOGLIA_STORICO
 from utils import e_derby, nome_squadra, senza_accenti
@@ -331,19 +331,26 @@ class _Collegamento:
 
     def __init__(self, tabella, col_id):
         ultimi = tabella.sort_values("stagione").groupby(col_id).tail(1)
-        self.candidati = [(getattr(r, col_id), set(r.nome_completo.replace("-", " ").replace("'", " ").split()), r.squadra)
-                          for r in ultimi.itertuples()]
+        self.candidati = []
+        for r in ultimi.itertuples():
+            parole = r.nome_completo.replace("-", " ").replace("'", " ").split()
+            self.candidati.append((getattr(r, col_id), set(parole), r.squadra, parole[-1] if parole else ""))
         self.cache = {}
 
     def trova(self, nome, squadra):
         chiave = (nome, squadra)
         if chiave in self.cache:
             return self.cache[chiave]
-        tok = set(senza_accenti(nome).lower().replace("-", " ").replace("'", " ").split())
+        parole = senza_accenti(nome).lower().replace("-", " ").replace("'", " ").split()
+        tok = set(parole)
         migliore, punteggio = None, 0.0
-        for pid, tk, sq in self.candidati:
+        for pid, tk, sq, ultimo in self.candidati:
             comuni = len(tok & tk)
             if not comuni:
+                continue
+            # il cognome (ultima parola) deve comparire nell'altro nome: due compagni di squadra che condividono solo il nome
+            # di battesimo (Christian Comotto / Christian Pulisic) non sono la stessa persona
+            if not parole or (parole[-1] not in tk and ultimo not in tok):
                 continue
             s = comuni / float(len(tok | tk)) + (0.3 if sq == squadra else 0.0)
             if s > punteggio:
@@ -355,12 +362,14 @@ class _Collegamento:
 class ProfiliGiocatori:
     """Per ogni giocatore: gialli attesi in una partita intera (lam), ruolo, probabilità di uscire/entrare.
 
-    Storico dei cartellini: Kickest, e dove Kickest non conosce il giocatore Transfermarkt. Ogni stagione conta
-    secondo PESO_STAGIONE. Il rischio non è sui minuti ma sulla "esposizione": un minuto nel finale vale più di
-    uno iniziale (vedi presenza.py), quindi titolari e subentrati si confrontano sulla stessa scala.
+    Storico dei cartellini: la fonte primaria (FONTE_PRIMARIA: Transfermarkt, dal 2022/23, copre il 96-97% dei gialli di ogni
+    stagione) e, dove non conosce il giocatore, l'altra (Kickest). Falli e contrasti esistono solo in Kickest e vengono
+    sempre da lì. Ogni stagione conta secondo PESO_STAGIONE. Il rischio non è sui minuti ma sulla "esposizione": un minuto
+    nel finale vale più di uno iniziale (vedi presenza.py), quindi titolari e subentrati si confrontano sulla stessa scala.
     """
 
-    def __init__(self, kick, tm, espn_agg, anno, presenza):
+    def __init__(self, kick, tm, espn_agg, anno, presenza, primaria=None):
+        self.primaria = primaria or FONTE_PRIMARIA
         self.anno = anno
         self.espn = espn_agg
         self.pm = presenza
@@ -391,24 +400,34 @@ class ProfiliGiocatori:
     def _esposizione(self, ruolo, titolare, entrate):
         return titolare * self.exp_titolare[ruolo] + entrate * self.exp_subentrato
 
-    def profilo(self, espn_id, nome, squadra, ruolo_espn):
+    def _storie(self, nome, squadra):
+        """(storico Kickest, storico Transfermarkt) del giocatore: None dove la fonte non lo conosce."""
         pid = self.collega_k.trova(nome, squadra)
-        storia = self.storia.get(pid) if pid else None
-        fonte_tm = False
-        if storia is None and self.collega_tm is not None:   # Kickest non lo conosce: provo Transfermarkt
+        sk = self.storia.get(pid) if pid else None
+        st = None
+        if self.collega_tm is not None:
             pid_tm = self.collega_tm.trova(nome, squadra)
-            if pid_tm is not None:
-                storia, fonte_tm = self.storia_tm.get(pid_tm), True
-        if storia is not None:
-            ruolo = storia.sort_values("stagione").iloc[-1]["ruolo"]
+            st = self.storia_tm.get(pid_tm) if pid_tm is not None else None
+        return sk, st
+
+    def profilo(self, espn_id, nome, squadra, ruolo_espn):
+        sk, st = self._storie(nome, squadra)
+        if self.primaria == "tm":
+            storia = st if st is not None else sk
+        else:
+            storia = sk if sk is not None else st
+        # il ruolo è quello di Kickest quando c'è: le medie per ruolo (self.prior, self.lam_ruolo) sono calcolate con i suoi ruoli
+        # e per gli esterni e i trequartisti i due siti non sono d'accordo (95% di ruoli uguali)
+        fonte_ruolo = sk if sk is not None else storia
+        if fonte_ruolo is not None:
+            ruolo = fonte_ruolo.sort_values("stagione").iloc[-1]["ruolo"]
         else:
             ruolo = _RUOLO_ESPN.get(ruolo_espn, "C")
         if espn_id in self.pm.portieri:
             ruolo = "P"
         # -- numeri da mostrare (gialli, falli e contrasti ogni 90 minuti, con la stessa prudenza di prima)
         pr = self.prior.get(ruolo, {"y": 0.2, "f": 1.0, "t": 1.0})
-        w_min = w_giallo = w_falli = 0.0
-        w_min_k = w_tack = 0.0
+        w_min = w_giallo = 0.0
         gialli_k = minuti_k = 0.0
         # -- gialli attesi in una partita intera
         w_y = w_e = 0.0
@@ -419,23 +438,29 @@ class ProfiliGiocatori:
                 w_giallo += w * r.gialli
                 gialli_k += r.gialli
                 minuti_k += r.minuti
-                if not fonte_tm:
-                    w_falli += w * r.falli
-                    w_min_k += w * r.minuti
-                    w_tack += w * r.contrasti
                 w_y += w * r.gialli
                 w_e += w * self._esposizione(ruolo, r.titolare, r.entrate)
+        # falli e contrasti ci sono solo in Kickest: li prendo da lì, con i minuti di Kickest, qualunque sia la fonte dei gialli
+        w_min_k = w_falli = w_tack = 0.0
+        if sk is not None:
+            for r in sk.itertuples():
+                w = PESO_STAGIONE.get(self.anno - r.stagione, 0.2)
+                w_min_k += w * r.minuti
+                w_falli += w * r.falli
+                w_tack += w * r.contrasti
+        w_min_f = w_min_k
         cur = self.espn.get(espn_id)
         peso0 = PESO_STAGIONE[0]
         if cur:
             w_min += peso0 * cur["minuti"]
             w_giallo += peso0 * cur["gialli"]
+            w_min_f += peso0 * cur["minuti"]
             w_falli += peso0 * cur["falli"]
             w_y += peso0 * cur["gialli"]
             w_e += peso0 * self._esposizione(ruolo, max(cur["presenze"] - cur["entrate"], 0), cur["entrate"])
         K = MINUTI_PRIOR / 90.0
         y90 = (w_giallo + pr["y"] * K) / (w_min / 90.0 + K)
-        f90 = (w_falli + pr["f"] * K) / (w_min / 90.0 + K)
+        f90 = (w_falli + pr["f"] * K) / (w_min_f / 90.0 + K)
         t90 = (w_tack + pr["t"] * K) / (w_min_k / 90.0 + K)
         lam = (w_y + self.lam_ruolo[ruolo] * K) / (w_e + K)
         return {"id": espn_id, "nome": nome, "ruolo": ruolo, "y90": y90, "f90": f90, "t90": t90, "lam": lam,

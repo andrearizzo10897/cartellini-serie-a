@@ -23,7 +23,8 @@ per ogni giocatore (titolari e panchina) delle prossime partite.
 - `backtest_giocatori.py` – verifica le probabilità dei singoli giocatori (calibrazione) e le confronta con le quote DAZN Bet salvate: `python backtest_giocatori.py`
 - `tests/` – prove automatiche dei lettori (Sky, SosFanta, DAZN Bet, cache ESPN): `python -m unittest` (offline, meno di un secondo; da rifare dopo ogni modifica ai lettori)
 - `pagina.py` – genera `index.html`
-- `fonti/` – un modulo per ogni sito (football-data, Kickest, Transfermarkt, ESPN, dettagli e arbitri ESPN, AIA, API-Football, allenatori,
+- `transfermarkt_passato.json` – copia delle stagioni finite di Transfermarkt (fonte principale dello storico dei giocatori); serve alla pagina online, perché GitHub non può leggere il sito. Si aggiorna da sola sul PC e parte con le quote.
+- `fonti/` – un modulo per ogni sito (football-data, Transfermarkt, Kickest, ESPN, dettagli e arbitri ESPN, AIA, API-Football, allenatori,
   DAZN Bet: quota «giocatore ammonito» di ogni giocatore, con valore atteso accanto a P(giallo); se il sito non risponde la colonna resta «–»;
   Sky Sport e SosFanta: formazioni ufficiali, di solito prima di ESPN)
 - La scheda «Come funziona» della pagina mostra quale fonte ha risposto a ogni aggiornamento; in alto «Dati di N min fa» avvisa quando la pagina è vecchia.

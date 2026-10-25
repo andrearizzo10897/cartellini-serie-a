@@ -32,6 +32,9 @@ FORMA_LUNGA = 10
 # Pesi con cui le stagioni pesano sul profilo di un giocatore (la più recente conta di più)
 PESO_STAGIONE = {0: 1.0, 1: 0.8, 2: 0.5, 3: 0.3}  # distanza dalla stagione corrente
 MINUTI_PRIOR = 900  # "minuti virtuali" con cui si tira il giocatore verso la media del suo ruolo
+# Fonte dello storico dei giocatori: "tm" = Transfermarkt (2022/23-2025/26) con Kickest di riserva, "kickest" = il contrario.
+# Falli e contrasti vengono sempre da Kickest (Transfermarkt non li ha).
+FONTE_PRIMARIA = "tm"
 
 
 def leggi_env():

@@ -58,14 +58,14 @@ def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti,
             _partite(len(quote_giocatori)), quote_ora)))
     else:
         fonti.append(("DAZN Bet", "no", "nessuna quota ricevuta"))
+    fonti.append(("Transfermarkt (storico principale)", "ok" if n_tm else "att",
+                  "{} giocatori con storico dal 2022/23".format(n_tm) if n_tm else "non ha risposto: uso Kickest"))
     if mancanti:
-        fonti.append(("Kickest", "att", "non ha risposto per {}".format(", ".join(
+        fonti.append(("Kickest (riserva, falli e contrasti)", "att", "non ha risposto per {}".format(", ".join(
             "{}/{}".format(s, str(s + 1)[2:]) for s in mancanti))))
     else:
-        fonti.append(("Kickest", "ok", "stagioni passate caricate" + ("" if kickest_corrente else
+        fonti.append(("Kickest (riserva, falli e contrasti)", "ok", "stagioni passate caricate" + ("" if kickest_corrente else
                       "; il {}/{} non è ancora pubblicato, per quella in corso uso ESPN".format(anno, str(anno + 1)[2:]))))
-    fonti.append(("Transfermarkt", "ok" if n_tm else "att",
-                  "{} giocatori con storico".format(n_tm) if n_tm else "non ha risposto: uso la media del ruolo"))
     con_arbitro = sum(1 for p in partite if p["arbitro"])
     fonti.append(("Arbitri (AIA)", "ok" if con_arbitro else "att",
                   "designati per {} su {}".format(_partite(con_arbitro), len(partite))))
@@ -123,7 +123,7 @@ def main():
     dettagli = espn_dettaglio.carica(sorted(ids))
     tm = transfermarkt.carica(range(max(2022, anno - 4), anno))
     if not len(tm):
-        stato.append("Transfermarkt non ha risposto: per i giocatori senza storico Kickest uso la media del ruolo.")
+        stato.append("Transfermarkt non ha risposto (e non c'è la copia salvata): per lo storico dei giocatori uso solo Kickest.")
 
     print("5/5 Calcoli e pagina")
     ok, diversi = calcoli.controllo_espn(fd, finite, anno)

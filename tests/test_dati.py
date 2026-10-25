@@ -194,7 +194,8 @@ class RiepilogoFonti(unittest.TestCase):
 
     def test_kickest_e_transfermarkt(self):
         f = self.fonti(mancanti=[2025], n_tm=0)
-        self.assertEqual((f["Kickest"][0], f["Transfermarkt"][0]), ("att", "att"))
+        self.assertEqual((f["Kickest (riserva, falli e contrasti)"][0], f["Transfermarkt (storico principale)"][0]), ("att", "att"))
+        self.assertIn("2459 giocatori con storico dal 2022/23", self.fonti()["Transfermarkt (storico principale)"][1])
 
     def test_riquadro_html_senza_codice_iniettato(self):
         html = pagina.sezione_fonti([("Sito", "ok", "testo <script>alert(1)</script>")])

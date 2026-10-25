@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 import config
-from fonti import daznbet
+from fonti import daznbet, transfermarkt
 
 
 def git(*args):
@@ -25,10 +25,12 @@ def git(*args):
 def pubblica(nuove):
     """Salva `nuove` (quote scaricate ora) in quote_daznbet.json e le pubblica. Restituisce un messaggio."""
     daznbet.salva(nuove)  # l'orario cambia a ogni controllo, quindi c'è sempre qualcosa da pubblicare
-    git("add", daznbet.FILE.name)
-    if not git("status", "--porcelain", "--", daznbet.FILE.name).strip():
+    # con le quote parte anche l'archivio Transfermarkt delle stagioni finite, se è cambiato (GitHub non può leggere il sito)
+    file = [daznbet.FILE.name] + ([transfermarkt.ARCHIVIO.name] if transfermarkt.ARCHIVIO.exists() else [])
+    git("add", *file)
+    if not git("status", "--porcelain", "--", *file).strip():
         return "Quote DAZN Bet già pubblicate."
-    git("commit", "-m", "Quote DAZN Bet: {} partite".format(len(nuove)), "--", daznbet.FILE.name)
+    git("commit", "-m", "Quote DAZN Bet: {} partite".format(len(nuove)), "--", *file)
     git("push", "origin", "main")  # se GitHub è avanti si ferma qui: niente rebase automatici su un albero con altre modifiche
     return "Pubblicate le quote DAZN Bet di {} partite.".format(len(nuove))
 

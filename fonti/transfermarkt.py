@@ -10,15 +10,19 @@ Colonne utili ricavate:
 - gialli, doppi gialli, rossi, minuti
 """
 import html
+import os
 import re
 
 import pandas as pd
 
+import config
 from config import CACHE, STAGIONE_CORRENTE
 from utils import fresca, leggi_json, scarica, scrivi_json, senza_accenti, squadra
 
 BASE = "https://www.transfermarkt.it"
 PAUSA = 2.0
+ARCHIVIO = config.BASE / "transfermarkt_passato.json"   # stagioni finite, nel repository (fuori da dati/, che GitHub ripristina da una cache)
+MIN_SQUADRE = 18
 RUOLI = (("portiere", "P"), ("difensor", "D"), ("terzin", "D"), ("libero", "D"), ("centrocampist", "C"),
          ("mediano", "C"), ("trequartist", "C"), ("ala ", "A"), ("attaccant", "A"), ("punta", "A"), ("ala", "A"))
 RIGA = re.compile(r'<tr class="(?:odd|even)">(.*?)</tr>\s*(?=<tr class="(?:odd|even)">|</tbody>)', re.S)
@@ -106,12 +110,57 @@ def giocatori_squadra(slug, id_squadra, nome_squadra, anno):
     return righe
 
 
+def _completa(righe):
+    """Una stagione letta per intero: almeno 18 squadre (una pagina mancante o bloccata non deve passare per buona)."""
+    return bool(righe) and len({r["squadra"] for r in righe}) >= MIN_SQUADRE
+
+
+def _leggi_archivio():
+    try:
+        return leggi_json(ARCHIVIO)
+    except (OSError, ValueError):
+        return []
+
+
+def _aggiorna_archivio(archivio, nuove):
+    """Riscrive l'archivio con le stagioni finite appena lette per intero. Cambia solo se i dati cambiano."""
+    per_stagione = {}
+    for r in archivio:
+        per_stagione.setdefault(r["stagione"], []).append(r)
+    per_stagione.update(nuove)
+    righe = [r for anno in sorted(per_stagione) for r in sorted(per_stagione[anno], key=lambda r: (r["squadra"], r["id_tm"]))]
+    if righe != archivio:
+        scrivi_json(ARCHIVIO, righe)
+
+
 def carica(stagioni):
-    """DataFrame con una riga per giocatore, squadra e stagione."""
-    righe = []
+    """DataFrame con una riga per giocatore, squadra e stagione.
+
+    Le stagioni finite non cambiano più: se ne tiene una copia nel repository (transfermarkt_passato.json), perché da GitHub
+    Transfermarkt non risponde. Su GitHub si legge solo la copia; sul PC si legge il sito e la copia si aggiorna da sola
+    (poi la pubblica pubblica_quote.py insieme alle quote). Se il sito non risponde si ripiega sulla copia."""
+    archivio = _leggi_archivio()
+    in_archivio = {}
+    for r in archivio:
+        in_archivio.setdefault(r["stagione"], []).append(r)
+    su_github = bool(os.environ.get("GITHUB_ACTIONS"))
+    righe, nuove = [], {}
     for anno in stagioni:
+        finita = anno < STAGIONE_CORRENTE
+        if su_github and finita and _completa(in_archivio.get(anno)):
+            righe += in_archivio[anno]
+            continue
+        lette = []
         for slug, id_squadra, nome in squadre_stagione(anno):
-            righe += giocatori_squadra(slug, id_squadra, nome, anno)
+            lette += giocatori_squadra(slug, id_squadra, nome, anno)
+        if finita and not _completa(lette) and _completa(in_archivio.get(anno)):
+            print("  ! Transfermarkt {}: letto solo in parte, uso la copia salvata".format(anno))
+            lette = in_archivio[anno]
+        elif finita and _completa(lette):
+            nuove[anno] = lette
+        righe += lette
+    if nuove and not su_github:
+        _aggiorna_archivio(archivio, nuove)
     colonne = ["stagione", "squadra", "id_tm", "nome", "ruolo", "convocato", "presenze", "gialli", "doppi", "rossi",
                "entrate", "uscite", "minuti"]
     df = pd.DataFrame(righe, columns=colonne)

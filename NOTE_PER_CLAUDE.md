@@ -66,3 +66,14 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
   GitHub scarta gli avvii programmati. L'unico modo per avere di più è lanciarlo da fuori (workflow_dispatch con un token) – non fatto.
   Un giro dura circa 1-2 minuti. Nella pagina online non c'è alcun token (il pulsante Aggiorna è solo nascosto, `.az{display:none}`).
 - Pagina: pillola «Dati di N min fa» (verde < 45 min, gialla fino a 3 h, rossa oltre) con pulsante Ricarica (cache-busting `?r=`), riquadro «Fonti di questo aggiornamento».
+- **Storico dei giocatori (25/10/2026)**: Transfermarkt è la fonte primaria (2022/23-2025/26, ~96-97% dei gialli di ogni stagione), Kickest la riserva e l'unica
+  per falli e contrasti (`config.FONTE_PRIMARIA`, `ProfiliGiocatori(primaria=...)`; il ruolo resta quello di Kickest perché le medie per ruolo sono calcolate con i suoi).
+  Con il backtest dei giocatori le due scelte rendono uguale (log-loss 0,2213 in entrambi i casi). Prima, per chi era solo in Transfermarkt, i falli/90 erano sbagliati (minuti di TM, falli solo di quest'anno).
+- **Transfermarkt non risponde ai server di GitHub**: le stagioni finite sono in `transfermarkt_passato.json` (nel repository, fuori da dati/); su GitHub si legge solo quello,
+  sul PC si legge il sito e il file si riscrive solo se i dati cambiano (e parte con `pubblica_quote.py`). A ogni cambio di stagione servirà un giro dal PC per aggiungere la stagione finita.
+- **Collegamento ESPN -> storico per nome** (`calcoli._Collegamento`): il cognome (ultima parola) deve comparire nell'altro nome. Prima bastava lo stesso nome di battesimo nella
+  stessa squadra (punteggio 0,63 > soglia 0,55): Comotto prendeva lo storico di Pulisic, Mitaj quello di Balotelli ecc. (27 giocatori distinti nelle prime 20 partite).
+- **Stagione in corso, ESPN o altro**: ESPN resta la fonte (partita per partita, formazioni, minuto di cambi e cartellini; funziona anche da GitHub). Confronto con Transfermarkt 2026/27:
+  255 gialli in entrambi, uguali per 490 giocatori su 498 (TM ha 7 gialli in più su panchinari che ESPN non attribuisce). Kickest 2026/27 non è ancora pubblicato; TM non è raggiungibile da GitHub
+  e non ha il minuto dei cambi. Non servono altre fonti.
+

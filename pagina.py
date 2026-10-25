@@ -575,9 +575,9 @@ partite pesa n/(n+15). Se l'arbitro non è ancora designato, il fattore è neutr
 <li>Il totale atteso è la somma delle due squadre (ad esempio 1,8 + 2,1 = 3,9 gialli).</li></ul></div>
 
 <div class="card"><h3>2. Come si dividono tra i giocatori</h3><ul>
-<li><b>Gialli attesi del giocatore in una partita intera.</b> Dallo storico: Kickest (e Transfermarkt per chi Kickest non conosce) più la
-stagione in corso, con le stagioni pesate 1 / 0,8 / 0,5 / 0,3 (2026/27, 2025/26, 2024/25, 2023/24). Chi ha giocato poco viene avvicinato
-alla media del suo ruolo, equivalente a 10 partite: così non finisce a valori estremi.</li>
+<li><b>Gialli attesi del giocatore in una partita intera.</b> Dallo storico: Transfermarkt (e Kickest per chi Transfermarkt non conosce) più la
+stagione in corso, con le stagioni pesate 1 / 0,8 / 0,5 / 0,3 (2026/27, 2025/26, 2024/25, 2023/24; la 2022/23 pesa 0,2). Chi ha giocato
+poco viene avvicinato alla media del suo ruolo, equivalente a 10 partite: così non finisce a valori estremi.</li>
 <li><b>I minuti non valgono tutti uguale.</b> Nelle {partite} partite ESPN analizzate solo il <b>{primo:.0f}%</b> dei gialli arriva nei primi
 15 minuti e il <b>{ultimo:.0f}%</b> dal 75' in poi. Per questo il tempo in campo è misurato come quota di rischio, non in minuti.</li>
 <li><b>Titolari.</b> Si stima la probabilità di essere sostituiti, per giocatore e per ruolo: nei dati escono prima della fine circa il
@@ -589,7 +589,7 @@ differenze reali tra allenatori. Chi entra lo fa in media al <b>{ingresso:.0f}'<
 rischio di una partita intera: è la colonna <b>Se entra</b>. Quindi P(giallo) del panchinaro = P(entra) × Se entra.</li>
 <li><b>Coerenza con la partita.</b> Un unico numero scala tutta la rosa in modo che la somma dei gialli dei giocatori coincida con il
 totale atteso per la squadra. L'ordine tra i giocatori non cambia.</li>
-<li><b>«nuovo»</b>: giocatore senza storico in Serie A. Si usa la media del ruolo, quindi la sua percentuale è poco informativa.</li></ul></div>
+<li><b>«nuovo»</b>: giocatore senza storico in Serie A dal 2022/23 (arrivato dall'estero, dalla B o da una neopromossa). Si usa la media del ruolo, quindi la sua percentuale è poco informativa.</li></ul></div>
 
 <div class="card"><h3>3. Le soglie over</h3><ul>
 <li>Dal totale atteso si ricava con una distribuzione di Poisson la probabilità che i gialli siano più di 3,5, 4,5 o 5,5.</li>
@@ -606,9 +606,10 @@ tipo, partite dello stesso arbitro.</li></ul></div>
 
 <div class="card"><h3>Da dove arrivano i dati</h3><ul>
 <li><b>football-data.co.uk</b>: gialli, rossi, falli e quote 1X2 di ogni partita, dal 2023/24 (si aggiorna con qualche giorno di ritardo: le partite più recenti le ricavo da ESPN).</li>
-<li><b>ESPN</b>: calendario, formazioni ufficiali e panchina, minuto di cambi e ammonizioni (2025/26 e 2026/27), arbitri dal 2025/26 e quote 1X2 delle partite ancora da giocare (se mancano, la partita è trattata come media).</li>
-<li><b>Kickest</b>: minuti, presenze, gialli, falli e contrasti per giocatore nel 2023/24, 2024/25 e 2025/26 (il 2026/27 non è ancora pubblicato).</li>
-<li><b>Transfermarkt</b>: presenze, convocazioni, entrate, uscite e gialli per giocatore dal 2022/23. È il ripiego quando Kickest non conosce un giocatore.</li>
+<li><b>Transfermarkt</b>: fonte principale dello storico dei giocatori. Presenze, convocazioni, entrate, uscite, minuti e gialli dal 2022/23 al 2025/26: copre il 96-97% dei gialli di ogni stagione. Le stagioni finite sono salvate nel repository, perché da GitHub il sito non risponde.</li>
+<li><b>Kickest</b>: di riserva per i giocatori che Transfermarkt non ha, e unica fonte di falli e contrasti. Minuti, presenze, gialli, falli e contrasti nel 2023/24, 2024/25 e 2025/26 (copre il 93-94% dei gialli; il 2026/27 non è ancora pubblicato).</li>
+<li><b>ESPN</b>: calendario, formazioni ufficiali e panchina, minuto di cambi e ammonizioni (2025/26 e 2026/27), arbitri dal 2025/26 e quote 1X2 delle partite ancora da giocare (se mancano, la partita è trattata come media). Per la stagione in corso è la fonte dei giocatori: ottobre 2026, confrontata con Transfermarkt, i gialli coincidono per 490 giocatori su 498.</li>
+<li><b>Sky Sport e SosFanta</b>: formazioni ufficiali, di solito prima di ESPN (circa un'ora prima della partita).</li>
 <li><b>API-Football (piano gratuito)</b>: arbitro di ogni partita del 2023/24 e 2024/25.</li>
 <li><b>AIA</b>: designazioni arbitrali della giornata. Il sito mostra solo l'ultima: le salvo a ogni aggiornamento.</li></ul></div>
 

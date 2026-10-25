@@ -49,8 +49,10 @@ def quote_salvate():
     return quote
 
 
-def raccogli():
-    """Una riga per giocatore e partita: probabilità prevista con i dati di prima, esito reale."""
+def raccogli(primaria=None):
+    """Una riga per giocatore e partita: probabilità prevista con i dati di prima, esito reale.
+
+    primaria: "tm" o "kickest" = quale fonte dello storico dei giocatori passa per prima (default: config.FONTE_PRIMARIA)."""
     anno, oggi = config.STAGIONE_CORRENTE, config.adesso().date()
     fd = football_data.carica()
     arb_api = api_football.carica(config.STAGIONI_STORICO)
@@ -88,7 +90,7 @@ def raccogli():
         ctx = {"quote_giocatori": quote, "quote_ora": None, "anno": anno, "df": df, "lungo": calcoli.formato_lungo(df),
                "tabelle": tabelle, "designazioni": designazioni, "aia_risolte": aia_ris, "poisson": poisson,
                "stato_modello": stato, "rapporto_var": 1.0, "presenza": pm,
-               "profili": calcoli.ProfiliGiocatori(kick, tm, giocatori_espn, anno, pm)}
+               "profili": calcoli.ProfiliGiocatori(kick, tm, giocatori_espn, anno, pm, primaria)}
         for ev, forma in [(e, f) for e, f in finite if e["inizio"].date() == D]:
             ev = dict(ev)
             if not ev.get("quote"):   # ESPN toglie le quote 1X2 a partita finita: uso quelle di football-data
@@ -169,12 +171,18 @@ def stampa_mercato(R):
 
 
 def main():
-    R = raccogli()
+    primaria = None
+    if "--primaria" in sys.argv:    # python backtest_giocatori.py --primaria kickest   (per confrontare le due fonti)
+        primaria = sys.argv[sys.argv.index("--primaria") + 1]
+    R = raccogli(primaria)
     if not len(R):
         print("Nessuna partita da valutare.")
         return 1
+    print("fonte primaria dello storico: {}".format(primaria or config.FONTE_PRIMARIA))
     stampa_calibrazione(R)
     stampa_mercato(R)
+    R.to_json(config.BASE / "dati" / "cache" / "backtest_giocatori_{}.json".format(primaria or config.FONTE_PRIMARIA),
+              orient="records")   # per confrontare due esecuzioni (cartella ignorata da git)
     return 0
 
 
