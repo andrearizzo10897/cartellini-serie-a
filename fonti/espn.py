@@ -94,27 +94,37 @@ def _leggi_formazioni(js):
     return out
 
 
-def _ha_titolari(js):
-    return any(p.get("starter") for r in js.get("rosters", []) for p in r.get("roster", []))
+def finita(js):
+    """True se il dettaglio ESPN è stato salvato a partita finita (non prima del fischio né durante)."""
+    try:
+        return js["header"]["competitions"][0]["status"]["type"]["state"] == "post"
+    except (KeyError, IndexError, TypeError):
+        return False
 
 
 def formazioni(id_partita, stato):
-    """Formazioni (titolari + panchina) con le statistiche della partita, se disponibili."""
+    """Formazioni (titolari + panchina) con le statistiche della partita, se disponibili.
+
+    Una partita finita si tiene in cache per sempre, ma solo se il file è stato salvato a partita finita: un file
+    preso prima del fischio o durante il gioco (gialli e cambi incompleti) si riscarica.
+    """
     percorso = CACHE / "espn" / "partita_{}.json".format(id_partita)
-    if stato == "post" and percorso.exists() and not _ha_titolari(leggi_json(percorso)):
-        percorso.unlink()   # salvata prima delle formazioni: una partita finita ha sempre i titolari, la riscarico
-    if not fresca(percorso, None if stato == "post" else 0.08):
+    vecchio = leggi_json(percorso) if percorso.exists() else None
+    valido = fresca(percorso, None if stato == "post" else 0.08)
+    if valido and stato == "post" and not finita(vecchio):
+        valido = False
+    if valido:
+        js = vecchio
+    else:
         try:
             js = scarica(BASE + "/summary", params={"event": id_partita}).json()
         except Exception as e:
             print("  ! ESPN partita {}: {}".format(id_partita, e))
-            if not percorso.exists():
+            if vecchio is None:
                 return {}
-            js = leggi_json(percorso)
+            js = vecchio
         else:
             scrivi_json(percorso, js)
-    else:
-        js = leggi_json(percorso)
     return _leggi_formazioni(js)
 
 

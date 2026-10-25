@@ -50,7 +50,11 @@ def main():
                      .format(anno, str(anno + 1)[2:]))
 
     print("4/5 Partite e formazioni (ESPN)")
-    giorni_giocati = set(fd[fd["stagione"] == anno]["data"].dt.date) | {oggi - timedelta(1), oggi}
+    # football-data arriva con qualche giorno di ritardo: da ESPN leggo anche tutti i giorni dopo il suo ultimo dato
+    date_fd = set(fd[fd["stagione"] == anno]["data"].dt.date)
+    ultimo_fd = max(date_fd, default=oggi - timedelta(2))
+    giorni_giocati = date_fd | {ultimo_fd + timedelta(k) for k in range(1, max((oggi - ultimo_fd).days, 1) + 1)} \
+        | {oggi - timedelta(1), oggi}
     finite, viste = [], set()
     for g in sorted(giorni_giocati):
         for ev in espn.partite_del_giorno(g):

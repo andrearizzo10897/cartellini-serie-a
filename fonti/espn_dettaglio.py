@@ -40,7 +40,7 @@ def compatta(js):
     if ufficiali:
         primo = next((o for o in ufficiali if o.get("order") == 1), ufficiali[0])
         arbitro = _breve((primo.get("fullName") or primo.get("displayName") or "").strip()) or None
-    return {"data": data, "formazioni": forma, "eventi": eventi, "arbitro": arbitro}
+    return {"data": data, "formazioni": forma, "eventi": eventi, "arbitro": arbitro, "finita": espn.finita(js)}
 
 
 def _da_cache_completa(id_partita):
@@ -68,11 +68,15 @@ def salva():
 def dettaglio(id_partita):
     """Dettaglio compatto di una partita finita: dall'archivio, dalla cache completa o dalla rete (solleva se non risponde)."""
     archivio = _archivio_corrente()
-    if id_partita not in archivio:
-        js = _da_cache_completa(id_partita)
-        if js is None:
-            js = scarica(espn.BASE + "/summary", params={"event": id_partita}).json()
-        archivio[id_partita] = compatta(js)
+    voce = archivio.get(id_partita)
+    if voce is not None and voce.get("finita") is True:
+        return voce
+    js = _da_cache_completa(id_partita)
+    if voce is not None and js is None:
+        return voce   # voce dell'archivio iniziale (partite di stagioni passate, scaricate a partita finita)
+    if js is None:
+        js = scarica(espn.BASE + "/summary", params={"event": id_partita}).json()
+    archivio[id_partita] = compatta(js)   # voce nuova, o rifatta da un file salvato prima della fine della partita
     return archivio[id_partita]
 
 
@@ -81,7 +85,8 @@ def carica(ids):
     archivio = _archivio_corrente()
     nuovi = 0
     for id_partita in ids:
-        if id_partita in archivio:
+        voce = archivio.get(id_partita)
+        if voce is not None and (voce.get("finita") is True or not (CACHE / "espn" / "partita_{}.json".format(id_partita)).exists()):
             continue
         try:
             dettaglio(id_partita)
