@@ -80,3 +80,23 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
   255 gialli in entrambi, uguali per 490 giocatori su 498 (TM ha 7 gialli in più su panchinari che ESPN non attribuisce). Kickest 2026/27 non è ancora pubblicato; TM non è raggiungibile da GitHub
   e non ha il minuto dei cambi. Non servono altre fonti.
 
+
+## Sessione del 29/10/2026: pagina «Giocatori», cartellini giornata per giornata
+- **Scheda «Giocatori»** (`pagina.sezione_giocatori`, dati da `calcoli.cartellini_giornate`): una riga per giocatore sceso in campo (o ammonito) nel 2026/27, una colonna per giornata.
+  Pallino giallo / rosso (anche doppio giallo) / vuoto = in campo senza cartellini / puntino = la sua squadra ha giocato ma lui no / niente = giornata non ancora giocata.
+  Toccando una riga: partite e minuti dei cartellini. Filtri: squadra, «Più ammoniti» (tutte le squadre in classifica), ricerca senza accenti.
+- I dati vanno nella pagina come JSON compatto (`#gg-dati`, ~50 KB) e la griglia la disegna il JS alla prima apertura della scheda: in HTML sarebbero ~19.000 elementi.
+- **Telefono** (fino a 640 px): metà stagione per volta (1ª–19ª / 20ª–38ª, di partenza quella in corso) con pallini da ~10 px e nomi corti («L. Martínez»); «Tutte» mostra le 38
+  fitte (~5 px). In orizzontale, su tablet e computer sempre tutte le 38. Campi di ricerca a 16 px (sotto, iOS ingrandisce la pagina). Sul telefono si ridisegna solo se cambia la larghezza.
+- **Numero della giornata** (`calcoli.numera_giornate`): ESPN non lo dà. Data tipica di ogni giornata = mediana delle partite in cui le due squadre sono entrambe alla n-esima partita;
+  poi, dalla partita più vicina alla data tipica, ognuna va nella giornata più vicina se le squadre sono libere; recuperi e anticipi nella giornata dove mancano entrambe
+  (prima quelle passate) e, se non c'è posto, si sposta la partita che lo occupa. Calendari ufficiali 2023/24 e 2024/25 (API-Football, in `tests/fixtures/calendari_serie_a.json`):
+  0 errori, anche rifacendo il calcolo giorno per giorno con le sole partite note (finite + 8 giorni). Scartati: blocchi di date consecutive (125 errori su 380) e centri senza
+  lo spostamento (giusto sulle stagioni intere ma non sul 2025/26: Supercoppa a dicembre, Milan-Como della 24ª giocata il 18/02 per le Olimpiadi a San Siro).
+- **Doppio giallo**: ESPN azzera il giallo, segna il rosso e lascia l'evento del primo giallo (stato "d"). I conteggi della pagina sono quelli di ESPN, come nelle tabelle delle partite.
+- **Minuto nel recupero**: ESPN ferma `clock.value` a 45:00/90:00 (46 cartellini su 287 nel 2026/27); `espn_dettaglio.compatta` salva anche `clock.displayValue` («90'+4'») nel campo
+  "testo". Le voci vecchie dell'archivio senza "testo" si rifanno dal file completo in cache (niente rete); quelle senza file restano come sono (minuto dal tempo di gioco).
+- **Giallo e poi rosso diretto** (Gaspar, Lecce-Juventus): ESPN conta tutti e due (gialli 1, rossi 1). Pallino rosso, ma il dettaglio elenca anche il giallo e il totale lo conta.
+- Totali nella testata di ogni squadra = cartellini presi con quella squadra (dai dati delle partite), non la somma di chi ci gioca adesso.
+- Revisione separata (code-reviewer) prima del commit: corretti anche `<` nel JSON (`\u003c`), pallini senza `aspect-ratio`/`inset` (iPhone vecchi), ridisegno dopo una rotazione
+  fatta con un'altra scheda aperta, partita rifatta con un nuovo id ESPN (giornata cercata anche per coppia di squadre). Disegno: ~0,1 s con CPU 4 volte più lenta (prima 0,7-1,4 s).

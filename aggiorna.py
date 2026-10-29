@@ -201,6 +201,7 @@ def main():
                  "per_stagione": {int(s): (float(g["g_tot"].mean()), len(g)) for s, g in df.groupby("stagione")}},
         "stato": stato,
         "fonti": fonti,
+        "giornate": calcoli.cartellini_giornate(finite, prossime, dettagli),   # pagina «Giocatori»
         "tempo": modello_presenza.riepilogo(),
         "aggiornato": config.adesso(),
         "partite_giocate": len(finite),

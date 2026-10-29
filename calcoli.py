@@ -1,6 +1,8 @@
 """Tutte le statistiche: arbitri, squadre, tipo di partita, soglie over e probabilità di giallo."""
 import math
 import re
+from datetime import datetime
+from statistics import median
 
 import pandas as pd
 
@@ -564,3 +566,159 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
     return {"ev": ev, "ufficiale": e_ufficiale, "arbitro": arbitro, "arbitro_aia": arbitro_aia,
             "info_arbitro": info_arb, "f_arb": f_arb, "tipo": tipo, "f_tipo": f_tipo,
             "atteso": totale, "atteso_base": e_c + e_t, "soglie": soglie, "squadre": squadre}
+
+
+# ---------------------------------------------------------------------------------------------
+# Giornate: i cartellini di ogni giocatore, giornata per giornata (pagina «Giocatori»)
+# ---------------------------------------------------------------------------------------------
+_EPOCA = datetime(2000, 1, 1)
+
+
+def numera_giornate(partite):
+    """{id partita: giornata}. ESPN non dà il numero della giornata: lo ricavo dal calendario.
+
+    Senza rinvii l'n-esima partita di ogni squadra è la giornata n: le partite in cui le due squadre sono entrambe
+    all'n-esima danno la data tipica (mediana) della giornata. Poi, partendo dalle partite più vicine alla data tipica,
+    ognuna va nella giornata più vicina se lì le due squadre sono libere; le altre (recuperi e anticipi) vanno nella
+    giornata in cui mancano entrambe, di preferenza una già passata, perché un rinvio si recupera dopo.
+    Provato sui calendari ufficiali 2023/24 e 2024/25 (Supercoppa, partite rinviate e sospese): nessun errore, anche
+    rifacendo il calcolo giorno per giorno con le sole partite note in quel momento (finite e degli 8 giorni dopo).
+    """
+    ordinate = sorted(partite, key=lambda p: p["inizio"])
+    t = {p["id"]: (p["inizio"] - _EPOCA).total_seconds() / 86400.0 for p in ordinate}
+    per_id = {p["id"]: p for p in ordinate}
+    giocate, voti = {}, {}
+    for p in ordinate:
+        nc = giocate[p["casa"]] = giocate.get(p["casa"], 0) + 1
+        nt = giocate[p["trasf"]] = giocate.get(p["trasf"], 0) + 1
+        if nc == nt:
+            voti.setdefault(nc, []).append(t[p["id"]])
+    if not voti:
+        return {}
+    centro = {g: median(v) for g, v in voti.items()}
+    for g in range(min(voti), max(voti)):        # giornata senza voti: a metà fra le vicine
+        if g not in voti:
+            a, b = max(h for h in voti if h < g), min(h for h in voti if h > g)
+            centro[g] = centro[a] + (centro[b] - centro[a]) * (g - a) / (b - a)
+    occupato, giornata = {}, {}                  # (squadra, giornata) -> id partita; id partita -> giornata
+
+    def metti(p, g):
+        giornata[p["id"]] = g
+        occupato[(p["casa"], g)] = occupato[(p["trasf"], g)] = p["id"]
+
+    def togli(p):
+        g = giornata.pop(p["id"])
+        del occupato[(p["casa"], g)], occupato[(p["trasf"], g)]
+
+    def libere(p):
+        return [g for g in centro if (p["casa"], g) not in occupato and (p["trasf"], g) not in occupato]
+
+    def migliore(p, scelte):                     # prima le giornate già passate, poi la più vicina
+        return min(scelte, key=lambda g: (centro[g] > t[p["id"]] + 2, abs(centro[g] - t[p["id"]])))
+
+    vicina = {p["id"]: min(centro, key=lambda g: (abs(centro[g] - t[p["id"]]), g)) for p in ordinate}
+    fuori = []
+    for p in sorted(ordinate, key=lambda p: abs(centro[vicina[p["id"]]] - t[p["id"]])):
+        g = vicina[p["id"]]
+        if (p["casa"], g) in occupato or (p["trasf"], g) in occupato:
+            fuori.append(p)
+        else:
+            metti(p, g)
+    for p in sorted(fuori, key=lambda p: t[p["id"]]):
+        posti = libere(p)
+        if posti:
+            metti(p, migliore(p, posti))
+            continue
+        # nessuna giornata libera per entrambe: sposto la partita che tiene occupato il posto, se può andare altrove
+        mosse = []
+        for g in centro:
+            chi = {occupato.get((p["casa"], g)), occupato.get((p["trasf"], g))} - {None}
+            if len(chi) != 1:
+                continue
+            q = per_id[chi.pop()]
+            togli(q)
+            altre = [h for h in libere(q) if h != g]
+            metti(q, g)
+            if altre:
+                h = migliore(q, altre)
+                costo = abs(centro[g] - t[p["id"]]) + abs(centro[h] - t[q["id"]]) - abs(centro[g] - t[q["id"]])
+                mosse.append((costo, g, q["id"], h))
+        if mosse:
+            _, g, id_q, h = min(mosse)
+            togli(per_id[id_q])
+            metti(per_id[id_q], h)
+            metti(p, g)
+        else:
+            giornata[p["id"]] = vicina[p["id"]]   # mai successo nei calendari provati
+    return giornata
+
+
+def _minuto(evento):
+    """«76'» o «90'+4'» come lo scrive ESPN (nel recupero il tempo di gioco resta fermo a 45:00 o 90:00). None senza evento."""
+    if evento is None:
+        return None
+    return evento.get("testo") or "{}'".format(int(math.ceil(evento["minuto"])))
+
+
+def cartellini_giornate(finite, prossime, dettagli):
+    """Per ogni giocatore sceso in campo (o ammonito) in questa stagione, cosa è successo in ognuna delle 38 giornate.
+
+    Stati: "g" giallo, "r" rosso diretto, "d" rosso per doppio giallo, "o" in campo senza cartellini, "." la sua squadra
+    ha giocato ma lui no, "-" giornata che la sua squadra non ha ancora giocato. I conteggi sono quelli di ESPN (come nelle
+    tabelle delle partite: il doppio giallo conta come rosso); il minuto viene dal dettaglio delle partite.
+    """
+    calendario, coppie = [], set()
+    for ev in [ev for ev, _ in finite] + list(prossime):
+        if (ev["casa"], ev["trasf"]) not in coppie:   # una partita rinviata non deve contare due volte
+            coppie.add((ev["casa"], ev["trasf"]))
+            calendario.append(ev)
+    numeri = numera_giornate(calendario)
+    per_coppia = {(ev["casa"], ev["trasf"]): numeri[ev["id"]] for ev in calendario if ev["id"] in numeri}
+    giocatori, giocate, id_squadra, totali = {}, {}, {}, {}
+    for ev, forma in sorted(finite, key=lambda x: x[0]["inizio"]):
+        g = numeri.get(ev["id"]) or per_coppia.get((ev["casa"], ev["trasf"]))   # partita rifatta con un altro id
+        if not g or g > 38:
+            continue
+        id_squadra[ev["casa"]], id_squadra[ev["trasf"]] = ev.get("id_casa"), ev.get("id_trasf")
+        eventi = (dettagli.get(ev["id"]) or {}).get("eventi", [])
+        for lato in ("home", "away"):
+            f = forma.get(lato)
+            if not f or not f["giocatori"]:   # ESPN a volte manda una squadra senza giocatori
+                continue
+            giocate.setdefault(f["squadra"], set()).add(g)
+            totale = totali.setdefault(f["squadra"], [0, 0])   # i cartellini presi con questa squadra (anche da chi poi è andato via)
+            for x in f["giocatori"]:
+                gialli, rossi = int(x["gialli"] or 0), int(x["rossi"] or 0)
+                in_campo = x["titolare"] or x["entrato"] or x["presenze"] > 0
+                if not (in_campo or gialli or rossi):
+                    continue
+                totale[0] += gialli
+                totale[1] += rossi
+                d = giocatori.setdefault(x["id"], {"nome": x["nome"], "ruolo": "", "stati": {}, "gialli": 0, "rossi": 0,
+                                                   "presenze": 0, "cartellini": []})
+                d["squadra"] = f["squadra"]                       # l'ultima squadra in cui ha giocato
+                d["ruolo"] = _RUOLO_ESPN.get(x["ruolo_espn"]) or d["ruolo"]   # chi entra dalla panchina non ha ruolo
+                d["presenze"] += bool(in_campo)
+                d["gialli"] += gialli
+                d["rossi"] += rossi
+                suoi = {tipo: [e for e in eventi if e["tipo"] == tipo and e["persone"][:1] == [x["id"]]]
+                        for tipo in ("yellow-card", "red-card")}
+                # col doppio giallo ESPN azzera il giallo e segna il rosso, ma resta l'evento del primo giallo;
+                # con un giallo e poi un rosso diretto li conta tutti e due: il pallino è rosso, il dettaglio li elenca entrambi
+                doppio = bool(rossi and not gialli and suoi["yellow-card"])
+                stato = ("d" if doppio else "r") if rossi else ("g" if gialli else "o")
+                for tipo, lettera, quanti in (("yellow-card", "g", gialli), ("red-card", "d" if doppio else "r", rossi)):
+                    for k in range(quanti):
+                        evento = suoi[tipo][k] if k < len(suoi[tipo]) else None
+                        d["cartellini"].append([g, ev["casa"], ev["trasf"], _minuto(evento), lettera])
+                prima = d["stati"].get(g)                      # due partite nella stessa giornata (cambio di squadra)
+                if prima is None or "rdgo".index(stato) < "rdgo".index(prima):
+                    d["stati"][g] = stato
+    righe = []
+    for d in giocatori.values():
+        fatte = giocate.get(d["squadra"], set())
+        righe.append({"nome": d["nome"], "squadra": d["squadra"], "ruolo": d["ruolo"], "gialli": d["gialli"],
+                      "rossi": d["rossi"], "presenze": d["presenze"], "cartellini": d["cartellini"],
+                      "stati": "".join(d["stati"].get(g) or ("." if g in fatte else "-") for g in range(1, 39))})
+    return {"ultima": max((g for s in giocate.values() for g in s), default=0), "id_squadra": id_squadra,
+            "totali": totali, "giocatori": righe}

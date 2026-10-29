@@ -1,4 +1,5 @@
 """Genera index.html: una pagina sola, senza librerie esterne (funziona anche offline)."""
+import json
 from html import escape
 
 from dateutil import tz
@@ -13,10 +14,10 @@ RUOLI = {"P": "Portiere", "D": "Difensore", "C": "Centrocampista", "A": "Attacca
 
 CSS = """
 :root{color-scheme:light;--bg:#f1f3fa;--surf:#fff;--surf2:#eef1fb;--ink:#1b2340;--ink2:#4a5472;--ink3:#7b85a3;
---line:#dde2f0;--bar:#4f7cff;--bar-bg:#e3e9ff;--accent:#4f46e5;--alto:#e8590c;--medio:#b98300;--giallo:#f7c600;
+--line:#dde2f0;--bar:#4f7cff;--bar-bg:#e3e9ff;--accent:#4f46e5;--alto:#e8590c;--medio:#b98300;--giallo:#f7c600;--rosso:#e03131;
 --rosa:#e11d48;--teal:#0891b2;--verde:#16a34a;--hero1:#4f46e5;--hero2:#0ea5c6;--ombra:0 1px 3px rgba(27,35,64,.08)}
 :root[data-theme="dark"]{color-scheme:dark;--bg:#12131f;--surf:#1b1d2e;--surf2:#25283d;--ink:#eceefa;--ink2:#b9bfd9;--ink3:#8a92b2;
---line:#323650;--bar:#6c8dff;--bar-bg:#27304f;--accent:#8b8cff;--alto:#ff9a52;--medio:#f0c040;--hero1:#312e81;--hero2:#0e7490;
+--line:#323650;--bar:#6c8dff;--bar-bg:#27304f;--accent:#8b8cff;--alto:#ff9a52;--medio:#f0c040;--rosso:#ff6161;--hero1:#312e81;--hero2:#0e7490;
 --ombra:0 1px 3px rgba(0,0,0,.4)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:0 16px}
@@ -85,7 +86,7 @@ td>b+.q{display:block;line-height:1.2}
 .riepilogo .g .mini i{background:linear-gradient(90deg,#fde047,#f59e0b)}
 .riepilogo .p .mini i{background:linear-gradient(90deg,#fda4af,var(--rosa))}
 .riepilogo h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin:0 0 4px}
-.titolo-sez{display:flex;align-items:baseline;gap:10px;margin:14px 0 8px}.titolo-sez h2{margin:0}
+.titolo-sez{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;margin:14px 0 8px}.titolo-sez h2{margin:0}
 .barcell{display:flex;align-items:center;gap:8px;justify-content:flex-end;min-width:120px}
 .bar{flex:1;max-width:90px;height:8px;border-radius:4px;background:var(--bar-bg);overflow:hidden}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--accent));border-radius:4px}
@@ -171,6 +172,42 @@ ul.fonti{list-style:none;padding:0;margin:6px 0 0}
 .fonte{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line)}.fonte:first-child{border-top:0}
 .fonte i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--verde);transform:translateY(-1px)}
 .fonte.att i{background:var(--medio)}.fonte.no i{background:var(--rosa)}
+.gg-filtri{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gg-filtri select,.gg-filtri input{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0;flex:1 1 170px}
+.gg-filtri select{flex:0 1 240px}
+.gg-meta{display:none;gap:4px}
+.gg-meta button{font:inherit;font-size:13px;color:var(--ink2);background:var(--surf);border:1px solid var(--line);border-radius:99px;padding:6px 12px;cursor:pointer}
+.gg-meta button[aria-pressed=true]{color:#fff;border-color:transparent;background:var(--accent);font-weight:600}
+.gg-legenda{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink2);margin:10px 0 4px}
+.gg-legenda span{display:inline-flex;align-items:center;gap:5px}
+.gg-legenda i,.gg-testa i,.gg-det li i{flex:none;display:inline-block;width:11px;height:11px;border-radius:50%}
+.gg-griglia{position:relative;z-index:0;--nome:200px;--tot:44px;--n:38;--dot:12px}
+.gg-testa,.gg-r,.gg-guide{display:grid;grid-template-columns:var(--nome) repeat(var(--n),minmax(0,1fr)) var(--tot);align-items:center}
+.gg-testa{position:sticky;top:0;z-index:2;background:var(--surf);border-bottom:1px solid var(--line);font-size:10px;color:var(--ink3);
+text-align:center;padding:6px 0 4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.gg-testa .cur{color:var(--accent);font-weight:800}.gg-testa>span:last-child{text-align:right}
+.gg-guide{position:absolute;top:0;right:0;bottom:0;left:0;z-index:-1;pointer-events:none;align-items:stretch}
+.gg-guide .c5{border-left:1px dashed var(--line)}.gg-guide .cur{background:var(--bar-bg)}
+.gg-r{min-height:24px;border-bottom:1px solid var(--surf2);cursor:pointer;content-visibility:auto;contain-intrinsic-size:auto 25px}
+.gg-r:hover,.gg-r:focus-visible{background:var(--surf2);outline:0}
+.gg-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;font-size:13px}
+.gg-n .stemma{width:16px;height:16px;margin-right:5px;vertical-align:-3px}
+.gg-r i{justify-self:center;width:var(--dot);height:var(--dot);border-radius:50%}
+.gg i.g{background:var(--giallo);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}.gg i.r,.gg i.d{background:var(--rosso)}
+.gg i.o{box-shadow:inset 0 0 0 1.5px var(--ink3)}.gg i.n{background:var(--line);transform:scale(.4)}
+.gg-t{text-align:right;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}.gg-t.zero{color:var(--ink3);font-weight:400}
+.gg-t sup{color:var(--rosso);font-size:10px;margin-left:2px}
+.gg-sq{display:flex;align-items:center;gap:6px;padding:14px 0 5px;background:var(--surf);border-bottom:2px solid var(--line);font-weight:700}
+.gg-sq small{font-weight:400;color:var(--ink3);font-size:12px}
+.gg-det{background:var(--surf2);border-radius:8px;padding:8px 10px;margin:3px 0 6px;font-size:12.5px;color:var(--ink2)}
+.gg-det ul{list-style:none;margin:6px 0 0;padding:0}.gg-det li{display:flex;align-items:center;gap:6px;padding:2px 0}
+@media (max-width:640px){
+.gg.card{padding:10px 6px}
+.gg-griglia{--nome:98px;--tot:28px}
+.gg-n{font-size:12px;padding-right:4px}.gg-r{min-height:28px;contain-intrinsic-size:auto 29px}.gg-testa{font-size:9px}
+.gg-meta{display:inline-flex}
+.gg-filtri select,.gg-filtri input{font-size:16px;flex:1 1 150px}
+}
 """
 
 JS = """
@@ -233,6 +270,54 @@ if(eta){var gen=Date.parse(eta.getAttribute('data-gen'));
 var dt=$('#det');if(dt){dt.addEventListener('change',function(){document.body.classList.toggle('det-on',dt.checked)})}
 var tm=$('#tema');if(tm){tm.addEventListener('click',function(){var d=document.documentElement,c=d.getAttribute('data-theme');
  d.setAttribute('data-theme',c==='dark'?'light':'dark')})}
+// pagina «Giocatori»: la griglia si disegna la prima volta che si apre la scheda (sono centinaia di righe)
+var ggd=$('#gg-dati'),ggb=$('#gg-griglia');
+if(ggd&&ggb){
+ var GD=JSON.parse(ggd.textContent),GS=GD.s,GG=GD.g,GU=GD.u,ggSel=$('#gg-sq'),ggQ=$('#gg-cerca'),ggPic=window.matchMedia('(max-width:640px)'),ggMeta=null,ggFatto=false,ggW=0,ggT;
+ var RU={P:'portiere',D:'difensore',C:'centrocampista',A:'attaccante'},TIPO={g:'giallo',r:'rosso',d:'rosso per doppio giallo'};
+ var ggPan=$('div[data-tab="giocatori"]'),ggN=function(s){return s.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase()};
+ var ggE=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+ var ggSt=function(s){return s[1]?'<span class="stemma st'+s[1]+'"></span>':''};
+ var pl=function(n,a,b){return n+' '+(n===1?a:b)};
+ var ggDisegna=function(){
+  // sul telefono metà stagione alla volta (pallini più grandi), di partenza quella in corso
+  var pic=ggPic.matches,m=pic?(ggMeta===null?(GU>19?2:1):ggMeta):0,a=m===2?20:1,b=m===1?19:38,n=b-a+1;
+  var q=ggN(ggQ.value.trim()),v=ggSel.value,piatta=v==='classifica'&&!q,lista=[],h=[],g,sq=-1;
+  // misure prima di toccare la griglia: dopo, il browser dovrebbe rifare subito l'impaginazione di tutte le righe
+  var cella=(ggb.clientWidth-(pic?126:244))/n,fitto=cella<11;ggW=window.innerWidth;
+  ggb.style.setProperty('--dot',Math.max(3,Math.min(12,Math.round(cella*0.8)))+'px');
+  $$('[data-meta]').forEach(function(x){x.setAttribute('aria-pressed',String(+x.getAttribute('data-meta')===m))});
+  GG.forEach(function(x,i){if(q?ggN(x[0]).indexOf(q)>=0:(v===''||v==='classifica'||x[3]===+v))lista.push(i)});
+  lista.sort(function(i,j){var x=GG[i],y=GG[j];return (piatta?0:x[3]-y[3])||(y[5]-x[5])||(y[6]-x[6])||(y[7]-x[7])||x[0].localeCompare(y[0])});
+  ggb.style.setProperty('--n',n);
+  var gu='<div class="gg-guide" aria-hidden="true"><span></span>',te='<div class="gg-testa" aria-hidden="true"><span></span>';
+  for(g=a;g<=b;g++){gu+='<span class="'+((g-1)%5===0&&g!==a?'c5':'')+(g===GU?' cur':'')+'"></span>';
+   te+='<span'+(g===GU?' class="cur"':'')+'>'+(!fitto||g===GU||((g===a||g%5===0)&&Math.abs(g-GU)>1)?g:'')+'</span>'}
+  h.push(gu+'<span></span></div>',te+'<span title="Gialli della stagione"><i class="g"></i></span></div>');
+  lista.forEach(function(i){var x=GG[i],s=GS[x[3]],r;
+   if(!piatta&&x[3]!==sq){sq=x[3];h.push('<div class="gg-sq">'+ggSt(s)+ggE(s[0])+' <small>'+pl(s[2],'giallo','gialli')+(s[3]?' · '+pl(s[3],'rosso','rossi'):'')+'</small></div>')}
+   r='<div class="gg-r" data-i="'+i+'" role="button" tabindex="0"><span class="gg-n">'+(piatta?ggSt(s):'')+ggE(pic?x[1]:x[0])+(x[2]&&!pic?'<span class="ruolo">'+x[2]+'</span>':'')+'</span>';
+   for(g=a;g<=b;g++){var c=x[4].charAt(g-1);r+=c==='-'?'<i></i>':'<i class="'+(c==='.'?'n':c)+'"></i>'}
+   h.push(r+'<span class="gg-t'+(x[5]?'':' zero')+'">'+x[5]+(x[6]?'<sup>'+x[6]+'</sup>':'')+'</span></div>')});
+  if(!lista.length)h.push('<p class="legenda">Nessun giocatore trovato.</p>');
+  ggb.innerHTML=h.join('');ggFatto=true};
+ var ggApri=function(r){var nx=r.nextElementSibling,x=GG[+r.getAttribute('data-i')],d=document.createElement('div'),t;
+  if(nx&&nx.classList.contains('gg-det')){nx.parentNode.removeChild(nx);return}
+  t='<b>'+ggE(x[0])+'</b> · '+ggE(GS[x[3]][0])+(x[2]?' · '+RU[x[2]]:'')+' · '+pl(x[7],'presenza','presenze')+' · '+pl(x[5],'giallo','gialli')+(x[6]?' · '+pl(x[6],'rosso','rossi'):'');
+  if(x[8].length)t+='<ul>'+x[8].map(function(c){return '<li><i class="'+c[4]+'"></i>'+c[0]+'ª giornata · '+ggE(GS[c[1]][0])+'–'+ggE(GS[c[2]][0])+(c[3]?' · '+ggE(c[3]):'')+' · '+TIPO[c[4]]+'</li>'}).join('')+'</ul>';
+  d.className='gg-det';d.innerHTML=t;r.parentNode.insertBefore(d,nx)};
+ ggb.addEventListener('click',function(e){var r=e.target.closest('.gg-r');if(r)ggApri(r)});
+ ggb.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('gg-r')){e.preventDefault();ggApri(e.target)}});
+ ggSel.addEventListener('change',ggDisegna);
+ ggQ.addEventListener('input',function(){clearTimeout(ggT);ggT=setTimeout(ggDisegna,150)});
+ $$('[data-meta]').forEach(function(x){x.addEventListener('click',function(){ggMeta=+x.getAttribute('data-meta');ggDisegna()})});
+ // sul telefono la barra degli indirizzi cambia l'altezza mentre si scorre: si ridisegna solo se cambia la larghezza
+ // con un'altra scheda aperta la griglia non ha larghezza: si ridisegna quando si torna su «Giocatori»
+ window.addEventListener('resize',function(){if(!ggFatto||window.innerWidth===ggW)return;if(ggPan.classList.contains('hid')){ggFatto=false;return}
+  clearTimeout(ggT);ggT=setTimeout(ggDisegna,200)});
+ var ggPrimo=function(){if(!ggFatto)ggDisegna()};
+ $$('nav [data-tab="giocatori"]').forEach(function(b){b.addEventListener('click',ggPrimo)});
+ if(!ggPan.classList.contains('hid'))ggPrimo()}
 })();
 """
 
@@ -651,10 +736,60 @@ def sezione_fonti(fonti):
     return '<div class="card"><h3>Fonti di questo aggiornamento</h3><ul class="fonti">{}</ul></div>'.format(righe)
 
 
+def breve(nome):
+    """'Lautaro Martínez' -> 'L. Martínez': i nomi della griglia sul telefono."""
+    c = cognome(nome)
+    return nome if c == nome else "{}. {}".format(nome[0], c)
+
+
+def sezione_giocatori(dati):
+    """Pagina «Giocatori»: una riga per giocatore e una colonna per giornata, con i pallini dei cartellini.
+
+    La griglia la disegna il JavaScript dai dati compatti: centinaia di righe da 38 pallini in HTML peserebbero troppo.
+    """
+    titolo = '<div class="titolo-sez"><h2>Cartellini giornata per giornata</h2>{}</div>'
+    if not dati or not dati["giocatori"]:
+        return titolo.format("") + '<div class="card">Nessuna partita giocata finora in questa stagione.</div>'
+    squadre = sorted({x["squadra"] for x in dati["giocatori"]} | set(dati["id_squadra"]), key=nome_squadra)
+    indice = {s: i for i, s in enumerate(squadre)}
+    stemma = {s: str(dati["id_squadra"].get(s) or "") for s in squadre}
+    compatti = {
+        "u": dati["ultima"],
+        # nome, stemma, gialli e rossi presi con questa squadra
+        "s": [[nome_squadra(s), stemma[s] if stemma[s] in _stemmi_ok else ""] + dati["totali"].get(s, [0, 0]) for s in squadre],
+        # nome, nome corto, ruolo, squadra, 38 stati, gialli, rossi, presenze, [giornata, casa, trasferta, minuto, tipo]
+        "g": [[x["nome"], breve(x["nome"]), x["ruolo"], indice[x["squadra"]], x["stati"], x["gialli"], x["rossi"], x["presenze"],
+               [[g, indice[c], indice[t], m, s] for g, c, t, m, s in x["cartellini"]]] for x in dati["giocatori"]],
+    }
+    opzioni = "".join('<option value="{}">{}</option>'.format(i, escape(nome_squadra(s))) for i, s in enumerate(squadre))
+    finale = "a" if dati["ultima"] == 1 else "e"
+    sottotitolo = '<span class="small">{} giocatori · {} giornat{f} giocat{f}</span>'.format(
+        len(dati["giocatori"]), dati["ultima"], f=finale)
+    return titolo.format(sottotitolo) + (
+        '<div class="card gg"><div class="gg-filtri">'
+        '<select id="gg-sq" aria-label="Squadra"><option value="">Tutte le squadre</option>'
+        '<option value="classifica">Più ammoniti</option>{}</select>'
+        '<input id="gg-cerca" type="search" placeholder="Cerca un giocatore" aria-label="Cerca un giocatore" autocomplete="off">'
+        '<span class="gg-meta" role="group" aria-label="Giornate da mostrare"><button type="button" data-meta="1">1ª–19ª</button>'
+        '<button type="button" data-meta="2">20ª–38ª</button><button type="button" data-meta="0">Tutte</button></span></div>'
+        '<div class="gg-legenda"><span><i class="g"></i>giallo</span><span><i class="r"></i>rosso</span>'
+        '<span><i class="o"></i>in campo, nessun cartellino</span><span><i class="n"></i>non ha giocato</span></div>'
+        '<div id="gg-griglia" class="gg-griglia"></div>'
+        '<noscript><p class="legenda">Per vedere la griglia serve JavaScript.</p></noscript>'
+        '<p class="legenda">Tocca un giocatore per vedere in quali partite e a che minuto è stato ammonito. A destra i gialli della '
+        'stagione e, in rosso, le espulsioni (il doppio giallo conta come rosso, come nei dati ESPN). Il numero della giornata lo '
+        'ricavo dal calendario, perché ESPN non lo indica: una partita rinviata torna nella sua giornata.</p></div>'
+        '<script type="application/json" id="gg-dati">{}</script>').format(
+        # "<" scritto come <: nessun nome può chiudere lo script o aprire un commento HTML
+        opzioni, json.dumps(compatti, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c"))
+
+
 def genera(partite, sezioni, percorso):
     global _stemmi_ok
     lega = sezioni["lega"]
-    css_stemmi, _stemmi_ok = stemmi.css([x for p in partite for x in (p["ev"].get("id_casa"), p["ev"].get("id_trasf"))])
+    giornate = sezioni.get("giornate")
+    css_stemmi, _stemmi_ok = stemmi.css([x for p in partite for x in (p["ev"].get("id_casa"), p["ev"].get("id_trasf"))] +
+                                        list((giornate or {}).get("id_squadra", {}).values()))
     pannelli = "".join(scheda_partita(i, p) for i, p in enumerate(partite))
     if not partite:
         pannelli = '<div class="card">Nessuna partita in programma nei prossimi giorni.</div>'
@@ -666,7 +801,8 @@ def genera(partite, sezioni, percorso):
     stato_dati = ('<div class="card"><h3>Stato dei dati</h3>{}</div>'.format(
         "".join('<div class="note">{}</div>'.format(escape(s)) for s in sezioni["stato"] if not e_quote(s)))
         if not sezioni.get("fonti") and any(not e_quote(s) for s in sezioni["stato"]) else "")
-    tabs = [("partite", "Partite"), ("arbitri", "Arbitri"), ("squadre", "Squadre"), ("tipi", "Tipo di partita"), ("metodo", "Come funziona")]
+    tabs = [("partite", "Partite"), ("giocatori", "Giocatori"), ("arbitri", "Arbitri"), ("squadre", "Squadre"),
+            ("tipi", "Tipo di partita"), ("metodo", "Come funziona")]
     nav = "".join('<button role="tab" data-tab="{k}" data-tab-gruppo="tab" aria-selected="{s}">{v}</button>'.format(
         k=k, v=v, s="true" if k == "partite" else "false") for k, v in tabs)
     corpo = {
@@ -676,6 +812,7 @@ def genera(partite, sezioni, percorso):
                      '<div class="tiles">{}</div><button type="button" class="freccia dx" aria-label="Avanti">›</button></div>'.format(
                          "".join(tessera(i, p) for i, p in enumerate(partite))) if partite else "") +
                     '<div class="opzioni"><label><input type="checkbox" id="det"> Mostra falli e contrasti</label></div>' + pannelli),
+        "giocatori": sezione_giocatori(giornate),
         "arbitri": "<h2>Arbitri: gialli e rossi a partita</h2>" + sezione_arbitri(sezioni["arbitri"], lega),
         "squadre": "<h2>Squadre: gialli fatti e subiti</h2>" + sezione_squadre(sezioni["squadre"]),
         "tipi": "<h2>Gialli per tipo di partita</h2>" + sezione_tipi(sezioni["tipi"]),

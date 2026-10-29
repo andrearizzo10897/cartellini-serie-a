@@ -28,6 +28,7 @@ def compatta(js):
             continue
         persone = [str(((p or {}).get("athlete") or {}).get("id")) for p in e.get("participants", [])]
         eventi.append({"tipo": tipo, "minuto": round(float(minuto) / 60.0, 1),
+                       "testo": (e.get("clock") or {}).get("displayValue"),   # «90'+4'»: nel recupero il valore resta 90:00
                        "squadra": squadra((e.get("team") or {}).get("displayName", "")),
                        "persone": persone})
     data = None
@@ -65,11 +66,16 @@ def salva():
         scrivi_json(ARCHIVIO, _archivio)
 
 
+def _completa(voce):
+    """Voce di una partita finita e con il minuto scritto ("testo", dal 29/10/2026): le altre si rifanno dal file completo, se c'è."""
+    return voce.get("finita") is True and all("testo" in e for e in voce.get("eventi", []))
+
+
 def dettaglio(id_partita):
     """Dettaglio compatto di una partita finita: dall'archivio, dalla cache completa o dalla rete (solleva se non risponde)."""
     archivio = _archivio_corrente()
     voce = archivio.get(id_partita)
-    if voce is not None and voce.get("finita") is True:
+    if voce is not None and _completa(voce):
         return voce
     js = _da_cache_completa(id_partita)
     if voce is not None and js is None:
@@ -86,7 +92,7 @@ def carica(ids):
     nuovi = 0
     for id_partita in ids:
         voce = archivio.get(id_partita)
-        if voce is not None and (voce.get("finita") is True or not (CACHE / "espn" / "partita_{}.json".format(id_partita)).exists()):
+        if voce is not None and (_completa(voce) or not (CACHE / "espn" / "partita_{}.json".format(id_partita)).exists()):
             continue
         try:
             dettaglio(id_partita)

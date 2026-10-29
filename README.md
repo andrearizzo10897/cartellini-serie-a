@@ -1,7 +1,8 @@
 # Cartellini Serie A
 
 Pagina `index.html` con arbitri, squadre, tipo di partita, soglie over 3,5 / 4,5 / 5,5 e probabilità di giallo
-per ogni giocatore (titolari e panchina) delle prossime partite.
+per ogni giocatore (titolari e panchina) delle prossime partite. Nella scheda «Giocatori» ci sono i gialli e i rossi
+di ogni giocatore della Serie A, giornata per giornata (un pallino per giornata, anche sul telefono).
 
 ## Come si usa
 1. **Doppio clic su `Avvia.bat`** (Windows) o `Avvia.command` (Mac). Si apre la pagina nel browser.
