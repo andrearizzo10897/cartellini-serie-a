@@ -9,7 +9,7 @@ from dateutil import tz
 
 import modello
 from config import CACHE
-from utils import fresca, leggi_json, scarica, scrivi_json, squadra
+from utils import fresca, leggi_json, scarica_json, scrivi_json, squadra
 
 BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer/ita.1"
 ROMA = tz.gettz("Europe/Rome")
@@ -37,17 +37,28 @@ def _quote(odds):
 
 
 def partite_del_giorno(giorno):
-    """Elenco delle partite di un giorno (oggetto date)."""
+    """Elenco delle partite di un giorno (oggetto date).
+
+    Se ESPN non risponde, o risponde con una pagina vuota, dopo qualche tentativo si usa l'ultima copia salvata del
+    giorno: meglio un calendario di qualche ora fa che fermare l'aggiornamento di tutta la pagina. Senza copia si ferma.
+    """
     percorso = CACHE / "espn" / "calendario_{}.json".format(giorno.strftime("%Y%m%d"))
-    js = None
+    js = vecchio = None
     if percorso.exists():
-        js = leggi_json(percorso)
+        js = vecchio = leggi_json(percorso)
         tutte_finite = all(e["status"]["type"]["state"] == "post" for e in js.get("events", []))
         if not ((tutte_finite and js.get("events")) or fresca(percorso, 0.1)):
             js = None
     if js is None:
-        js = scarica(BASE + "/scoreboard", params={"dates": giorno.strftime("%Y%m%d")}).json()
-        scrivi_json(percorso, js)
+        try:
+            js = scarica_json(BASE + "/scoreboard", params={"dates": giorno.strftime("%Y%m%d")})
+        except Exception as e:  # noqa: BLE001 - rete o risposta vuota
+            if vecchio is None:
+                raise
+            print("  ! ESPN calendario del {:%d/%m}: {} - uso la copia salvata".format(giorno, e))
+            js = vecchio
+        else:
+            scrivi_json(percorso, js)
     out = []
     for e in js.get("events", []):
         comp = e["competitions"][0]["competitors"]
@@ -117,7 +128,7 @@ def formazioni(id_partita, stato):
         js = vecchio
     else:
         try:
-            js = scarica(BASE + "/summary", params={"event": id_partita}).json()
+            js = scarica_json(BASE + "/summary", params={"event": id_partita})
         except Exception as e:
             print("  ! ESPN partita {}: {}".format(id_partita, e))
             if vecchio is None:

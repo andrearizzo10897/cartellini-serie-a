@@ -1,13 +1,14 @@
 """Quote DAZN Bet, cache ESPN e riepilogo delle fonti: nessuna rete (si usano dati finti e cartelle temporanee)."""
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from unittest import mock
 
 import aggiorna
 import calcoli
 import pagina
+import utils
 from fonti import daznbet, espn
 
 
@@ -85,41 +86,41 @@ class CacheEspn(unittest.TestCase):
 
     def test_file_salvato_durante_la_partita_si_riscarica(self):
         self.salva(riassunto("in", gialli=1))
-        with mock.patch.object(espn, "scarica", return_value=Risposta(riassunto("post", gialli=3))) as rete:
+        with mock.patch.object(espn, "scarica_json", return_value=riassunto("post", gialli=3)) as rete:
             forma = espn.formazioni("1", "post")
         self.assertEqual(rete.call_count, 1)
         self.assertEqual(self.gialli(forma), 6)   # 3 gialli per squadra: il file nuovo ha sostituito il vecchio
-        with mock.patch.object(espn, "scarica") as rete:
+        with mock.patch.object(espn, "scarica_json") as rete:
             espn.formazioni("1", "post")          # ora è finito: non si scarica più
         self.assertEqual(rete.call_count, 0)
 
     def test_file_salvato_prima_del_fischio_si_riscarica(self):
         self.salva(riassunto("pre"))
-        with mock.patch.object(espn, "scarica", return_value=Risposta(riassunto("post", gialli=2))) as rete:
+        with mock.patch.object(espn, "scarica_json", return_value=riassunto("post", gialli=2)) as rete:
             forma = espn.formazioni("1", "post")
         self.assertEqual(rete.call_count, 1)
         self.assertEqual(self.gialli(forma), 4)
 
     def test_file_finito_non_usa_la_rete(self):
         self.salva(riassunto("post", gialli=2))
-        with mock.patch.object(espn, "scarica") as rete:
+        with mock.patch.object(espn, "scarica_json") as rete:
             forma = espn.formazioni("1", "post")
         self.assertEqual(rete.call_count, 0)
         self.assertEqual(self.gialli(forma), 4)
 
     def test_rete_assente_con_file_vecchio_usa_il_vecchio(self):
         self.salva(riassunto("in", gialli=1))
-        with mock.patch.object(espn, "scarica", side_effect=OSError("rete")):
+        with mock.patch.object(espn, "scarica_json", side_effect=OSError("rete")):
             forma = espn.formazioni("1", "post")
         self.assertEqual(self.gialli(forma), 2)
 
     def test_rete_assente_senza_file(self):
-        with mock.patch.object(espn, "scarica", side_effect=OSError("rete")):
+        with mock.patch.object(espn, "scarica_json", side_effect=OSError("rete")):
             self.assertEqual(espn.formazioni("1", "post"), {})
 
     def test_partita_non_finita_resta_in_cache_per_poco(self):
         self.salva(riassunto("pre"))
-        with mock.patch.object(espn, "scarica") as rete:   # file appena salvato: ancora valido
+        with mock.patch.object(espn, "scarica_json") as rete:   # file appena salvato: ancora valido
             espn.formazioni("1", "pre")
         self.assertEqual(rete.call_count, 0)
 
@@ -127,6 +128,63 @@ class CacheEspn(unittest.TestCase):
         self.assertTrue(espn.finita(riassunto("post")))
         self.assertFalse(espn.finita(riassunto("in")))
         self.assertFalse(espn.finita({}))
+
+    def calendario(self, stato="pre"):
+        squadra = lambda lato, nome, id_: {"homeAway": lato, "team": {"displayName": nome, "id": id_}, "score": "0"}
+        return {"events": [{"id": "9", "date": "2026-10-31T14:00Z", "status": {"type": {"state": stato}},
+                            "competitions": [{"competitors": [squadra("home", "Roma", "1"), squadra("away", "Genoa", "2")]}]}]}
+
+    def salva_calendario(self, js, ore_fa):
+        import json
+        import os
+        import time
+        percorso = Path(self.tmp.name) / "espn" / "calendario_20261031.json"
+        percorso.write_text(json.dumps(js), encoding="utf-8")
+        quando = time.time() - ore_fa * 3600
+        os.utime(percorso, (quando, quando))
+
+    def test_calendario_senza_risposta_usa_la_copia_salvata(self):
+        # 31/10/2026: ESPN ha risposto 200 con la pagina vuota e l'aggiornamento sul PC si è fermato
+        self.salva_calendario(self.calendario(), ore_fa=48)
+        with mock.patch.object(espn, "scarica_json", side_effect=ValueError("Expecting value: line 1 column 1 (char 0)")):
+            partite = espn.partite_del_giorno(date(2026, 10, 31))
+        self.assertEqual([(p["casa"], p["trasf"], p["stato"]) for p in partite], [("roma", "genoa", "pre")])
+
+    def test_calendario_senza_risposta_e_senza_copia_si_ferma(self):
+        with mock.patch.object(espn, "scarica_json", side_effect=ValueError("pagina vuota")):
+            with self.assertRaises(ValueError):
+                espn.partite_del_giorno(date(2026, 10, 31))
+
+    def test_calendario_nuovo_sostituisce_la_copia(self):
+        self.salva_calendario(self.calendario(), ore_fa=48)
+        with mock.patch.object(espn, "scarica_json", return_value=self.calendario("post")) as rete:
+            self.assertEqual(espn.partite_del_giorno(date(2026, 10, 31))[0]["stato"], "post")
+        self.assertEqual(rete.call_count, 1)
+        with mock.patch.object(espn, "scarica_json") as rete:      # ora è tutta finita: resta in cache per sempre
+            espn.partite_del_giorno(date(2026, 10, 31))
+        self.assertEqual(rete.call_count, 0)
+
+
+class ScaricaJson(unittest.TestCase):
+    """ESPN a volte risponde 200 con la pagina vuota: si riprova come per un errore di rete."""
+
+    def vuota(self):
+        r = mock.Mock()
+        r.json.side_effect = ValueError("Expecting value: line 1 column 1 (char 0)")
+        return r
+
+    def test_risposta_vuota_si_riprova(self):
+        with mock.patch.object(utils, "scarica", side_effect=[self.vuota(), Risposta({"events": []})]) as rete, \
+                mock.patch.object(utils.time, "sleep"):
+            self.assertEqual(utils.scarica_json("https://esempio"), {"events": []})
+        self.assertEqual(rete.call_count, 2)
+
+    def test_sempre_vuota_alla_fine_solleva(self):
+        with mock.patch.object(utils, "scarica", side_effect=lambda *a, **k: self.vuota()) as rete, \
+                mock.patch.object(utils.time, "sleep"):
+            with self.assertRaises(ValueError):
+                utils.scarica_json("https://esempio")
+        self.assertEqual(rete.call_count, 3)
 
 
 class UltimaFormazione(unittest.TestCase):
@@ -206,3 +264,11 @@ class RiepilogoFonti(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RiprovaSulPC(unittest.TestCase):
+    """server.py: dopo un aggiornamento non riuscito non si aspetta mezz'ora."""
+
+    def test_attese(self):
+        import server
+        self.assertEqual([server.attesa_dopo(n) for n in range(5)], [1800, 180, 600, 1800, 1800])

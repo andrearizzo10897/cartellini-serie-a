@@ -9,7 +9,7 @@ L'archivio dati/cache/espn_dettaglio.json tiene solo i campi necessari: dopo la 
 from config import CACHE
 from fonti import espn
 from fonti.api_football import _breve
-from utils import leggi_json, scarica, scrivi_json, squadra
+from utils import leggi_json, scarica_json, scrivi_json, squadra
 
 ARCHIVIO = CACHE / "espn_dettaglio.json"
 VERSIONE = 1
@@ -81,7 +81,7 @@ def dettaglio(id_partita):
     if voce is not None and js is None:
         return voce   # voce dell'archivio iniziale (partite di stagioni passate, scaricate a partita finita)
     if js is None:
-        js = scarica(espn.BASE + "/summary", params={"event": id_partita}).json()
+        js = scarica_json(espn.BASE + "/summary", params={"event": id_partita})
     archivio[id_partita] = compatta(js)   # voce nuova, o rifatta da un file salvato prima della fine della partita
     return archivio[id_partita]
 

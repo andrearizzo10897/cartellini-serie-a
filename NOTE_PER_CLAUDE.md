@@ -100,3 +100,11 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
 - Totali nella testata di ogni squadra = cartellini presi con quella squadra (dai dati delle partite), non la somma di chi ci gioca adesso.
 - Revisione separata (code-reviewer) prima del commit: corretti anche `<` nel JSON (`\u003c`), pallini senza `aspect-ratio`/`inset` (iPhone vecchi), ridisegno dopo una rotazione
   fatta con un'altra scheda aperta, partita rifatta con un nuovo id ESPN (giornata cercata anche per coppia di squadre). Disegno: ~0,1 s con CPU 4 volte più lenta (prima 0,7-1,4 s).
+
+## 31/10/2026: aggiornamento del PC fermo per una risposta vuota di ESPN
+- Alle 12:51 Avvia non ha aggiornato: il calendario ESPN del giorno è arrivato con il codice 200 ma vuoto (`JSONDecodeError: Expecting value: line 1 column 1`),
+  `espn.partite_del_giorno` non lo gestiva e si fermava tutto. La pagina locale restava al 29/10, «Ricarica» rileggeva lo stesso file e il server riprovava solo dopo 30 minuti.
+  L'errore si legge nella finestra nera di Avvia (letto con AttachConsole + ReadConsoleOutputCharacterW, script `leggi_console.py` nella cartella temporanea di quella sessione).
+- `utils.scarica_json`: riprova anche le risposte vuote o troncate (usato da `espn` e `espn_dettaglio`). `partite_del_giorno` usa l'ultima copia salvata del giorno se ESPN
+  continua a non rispondere; senza copia si ferma come prima (meglio la pagina vecchia che una con giorni mancanti).
+- `server.py`: dopo un aggiornamento non riuscito riprova dopo 3 minuti, poi 10, poi ogni 30 (`attesa_dopo`). Vale dal prossimo avvio di Avvia.

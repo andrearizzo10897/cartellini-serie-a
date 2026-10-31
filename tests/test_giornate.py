@@ -176,7 +176,10 @@ class MinutoDelRecupero(unittest.TestCase):
         (cartella / "espn" / "partita_1.json").write_text(json.dumps(self.PARTITA), encoding="utf-8")
         vecchia = {"data": "2026-10-25", "formazioni": {}, "arbitro": None, "finita": True,
                    "eventi": [{"tipo": "red-card", "minuto": 90.0, "squadra": "lecce", "persone": ["7"]}]}
-        with mock.patch.object(espn_dettaglio, "CACHE", cartella),                 mock.patch.object(espn_dettaglio, "ARCHIVIO", cartella / "espn_dettaglio.json"),                 mock.patch.object(espn_dettaglio, "_archivio", {"_versione": espn_dettaglio.VERSIONE, "1": vecchia}),                 mock.patch.object(espn_dettaglio, "scarica", side_effect=AssertionError("niente rete")):
+        with mock.patch.object(espn_dettaglio, "CACHE", cartella), \
+                mock.patch.object(espn_dettaglio, "ARCHIVIO", cartella / "espn_dettaglio.json"), \
+                mock.patch.object(espn_dettaglio, "_archivio", {"_versione": espn_dettaglio.VERSIONE, "1": vecchia}), \
+                mock.patch.object(espn_dettaglio, "scarica_json", side_effect=AssertionError("niente rete")):
             voce = espn_dettaglio.carica(["1"])["1"]
             self.assertEqual(voce["eventi"][0]["testo"], "90'+4'")
             self.assertIs(espn_dettaglio.carica(["1"])["1"], voce)                 # ora è completa: non si rifà più

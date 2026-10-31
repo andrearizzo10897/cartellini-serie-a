@@ -82,24 +82,34 @@ def _ip_locale():
         return "IP-del-computer"
 
 
-def _quote_in_background():
-    """Finché la finestra è aperta, ogni 30 minuti scarica le quote DAZN Bet e le pubblica per la pagina online."""
+def attesa_dopo(falliti):
+    """Secondi fino al prossimo aggiornamento: 30 minuti, ma dopo un aggiornamento non riuscito si riprova presto
+    (3 minuti, poi 10), altrimenti la pagina resta ferma per mezz'ora per un sito che ha risposto male una volta."""
+    return {0: 1800, 1: 180, 2: 600}.get(falliti, 1800)
+
+
+def _quote_in_background(falliti):
+    """Finché la finestra è aperta scarica le quote DAZN Bet, le pubblica per la pagina online e rigenera la pagina locale."""
     while True:
-        time.sleep(1800)
+        time.sleep(attesa_dopo(falliti))
         try:
-            _aggiorna()  # riscarica le quote, le pubblica e rigenera anche la pagina locale (con l'orario nuovo)
-        except Exception:  # noqa: BLE001 - un errore di rete non deve fermare il ciclo
-            pass
+            ok, msg = _aggiorna()
+        except Exception as e:  # noqa: BLE001 - un errore non deve fermare il ciclo
+            ok, msg = False, str(e)
+        falliti = 0 if ok else falliti + 1
+        if not ok:
+            print("{} aggiornamento non riuscito, riprovo fra {} minuti:\n{}".format(
+                time.strftime("%H:%M"), attesa_dopo(falliti) // 60, msg))
 
 
 def main():
     rete = "--rete" in sys.argv
-    threading.Thread(target=_quote_in_background, daemon=True).start()
     # a ogni avvio aggiorno subito: così le quote e il loro orario sono quelli di adesso
     print("Aggiorno i dati prima di partire (può servire un minuto)...")
     ok, msg = _aggiorna()
     if not ok:
-        print("Attenzione, aggiornamento non riuscito:\n" + msg)
+        print("Attenzione, aggiornamento non riuscito (riprovo fra {} minuti):\n{}".format(attesa_dopo(1) // 60, msg))
+    threading.Thread(target=_quote_in_background, args=(0 if ok else 1,), daemon=True).start()
     server = ThreadingHTTPServer(("0.0.0.0" if rete else "127.0.0.1", PORTA), Gestore)
     print("Pagina pronta su http://localhost:{}".format(PORTA))
     if rete:

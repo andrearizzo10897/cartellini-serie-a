@@ -30,6 +30,18 @@ def scarica(url, params=None, headers=None, tentativi=3, pausa=0.3, timeout=40):
     raise errore
 
 
+def scarica_json(url, params=None, tentativi=3, **altri):
+    """Come scarica, ma restituisce il JSON già letto. Una risposta vuota o troncata con il codice 200 (ESPN a volte
+    risponde così: il 31/10/2026 ha fermato l'aggiornamento sul PC) si riprova come un errore di rete."""
+    for i in range(tentativi):
+        try:
+            return scarica(url, params=params, tentativi=1, **altri).json()
+        except (requests.RequestException, ValueError):
+            if i == tentativi - 1:
+                raise
+            time.sleep(1.5 * (i + 1))
+
+
 def fresca(percorso, ttl_ore):
     """True se il file in cache esiste ed è ancora valido (ttl None = per sempre)."""
     if not percorso.exists():
