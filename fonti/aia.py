@@ -5,7 +5,7 @@ dati/designazioni.json: lo storico degli arbitri 2026/27 cresce da solo giornata
 """
 import html
 import re
-from datetime import date
+from datetime import date, timedelta
 
 from config import DATI, stagione_di
 from utils import leggi_json, scarica, scrivi_json, senza_accenti, squadra
@@ -38,11 +38,14 @@ def _interpreta(pagina):
     titolo = next((r for r in reversed(righe[:pos]) if "DESIGNAZIONI" in r.upper() and "GIORNATA" in r.upper()), "")
     righe = righe[pos + 1:]
     partite = []
+    prima = None   # (data, ora) della partita precedente: serve quando manca il giorno
     i = 0
     while i < len(righe) - 2:
         r = righe[i]
         m = re.match(r"^(.+?)\s+[–-]\s+(.+?)$", r)
-        if not m or not re.match(GIORNI, righe[i + 1], re.I):
+        # dopo le squadre c'è giorno e ora («Sabato 31/10 h. 15.00»), ma a volte solo l'ora: nella 10ª giornata 2026/27
+        # le cinque partite di domenica erano «h. 12.30», «h. 15.00»... senza giorno, e si perdevano tutte
+        if not m or not (re.match(GIORNI, righe[i + 1], re.I) or re.match(r"h\.\s*\d", righe[i + 1])):
             i += 1
             continue
         # riga con giorno e ora, a volte spezzata su due righe
@@ -53,19 +56,25 @@ def _interpreta(pagina):
             blocco += " " + righe[j]
         g = re.search(r"(\d{1,2})/(\d{1,2})", blocco)
         o = re.search(r"h\.\s*(\d{1,2})[.:](\d{2})", blocco)
+        ora = "{}:{}".format(o.group(1).zfill(2), o.group(2)) if o else ""
         k = j + 1
         while k < len(righe) and righe[k].lower().startswith("(foto"):
             k += 1
         arbitro = righe[k] if k < len(righe) else ""
-        if g and arbitro:
+        if g:
             giorno, mese = int(g.group(1)), int(g.group(2))
-            anno = pub.year + (1 if mese < pub.month - 3 else 0)
+            data = date(pub.year + (1 if mese < pub.month - 3 else 0), mese, giorno)
+        elif prima:   # senza giorno: lo stesso della partita prima, o il giorno dopo se l'ora è più presto
+            data = prima[0] + timedelta(days=1 if ora and prima[1] and ora < prima[1] else 0)
+        else:
+            data = pub
+        if arbitro:
             partite.append({
                 "casa": squadra(m.group(1)), "trasf": squadra(m.group(2)),
-                "data": date(anno, mese, giorno).isoformat(),
-                "ora": "{}:{}".format(o.group(1).zfill(2), o.group(2)) if o else "",
+                "data": data.isoformat(), "ora": ora,
                 "arbitro": re.sub(r"\s*\(.*$", "", arbitro).strip(),   # toglie la sezione tra parentesi: "MASSA (Imperia)" -> "MASSA"
             })
+            prima = (data, ora)
         i = k + 1
     return {"titolo": titolo, "pubblicata": pub.isoformat(), "partite": partite}
 

@@ -1,0 +1,621 @@
+
+<!DOCTYPE html>
+<html dir="ltr" lang="it"><!-- InstanceBegin template="/Templates/sito-nuovo.dwt.asp" codeOutsideHTMLIsLocked="false" -->
+<head>
+	<!-- Google Tag Manager -->
+	<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+	new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+	j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+	'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+	})(window,document,'script','dataLayer','GTM-MC2XNG9');</script>
+	<!-- End Google Tag Manager -->
+
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="author" content="Servizio Informatico e Statistico AIA" />
+
+	<!-- Stylesheets
+	============================================= -->
+	<style type="text/css">@font-face {font-family:'Lato';font-style:normal;font-weight:300;src:url(/cf-fonts/s/lato/5.2.7/latin-ext/300/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Lato';font-style:normal;font-weight:300;src:url(/cf-fonts/s/lato/5.2.7/latin/300/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Lato';font-style:normal;font-weight:400;src:url(/cf-fonts/s/lato/5.2.7/latin/400/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Lato';font-style:normal;font-weight:400;src:url(/cf-fonts/s/lato/5.2.7/latin-ext/400/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Lato';font-style:italic;font-weight:400;src:url(/cf-fonts/s/lato/5.2.7/latin-ext/400/italic.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Lato';font-style:italic;font-weight:400;src:url(/cf-fonts/s/lato/5.2.7/latin/400/italic.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Lato';font-style:normal;font-weight:700;src:url(/cf-fonts/s/lato/5.2.7/latin/700/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Lato';font-style:normal;font-weight:700;src:url(/cf-fonts/s/lato/5.2.7/latin-ext/700/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:300;src:url(/cf-fonts/s/poppins/5.2.7/latin-ext/300/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:300;src:url(/cf-fonts/s/poppins/5.2.7/latin/300/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:300;src:url(/cf-fonts/s/poppins/5.2.7/devanagari/300/normal.woff2);unicode-range:U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+20F0,U+25CC,U+A830-A839,U+A8E0-A8FF,U+11B00-11B09;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:400;src:url(/cf-fonts/s/poppins/5.2.7/latin/400/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:400;src:url(/cf-fonts/s/poppins/5.2.7/devanagari/400/normal.woff2);unicode-range:U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+20F0,U+25CC,U+A830-A839,U+A8E0-A8FF,U+11B00-11B09;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:400;src:url(/cf-fonts/s/poppins/5.2.7/latin-ext/400/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:500;src:url(/cf-fonts/s/poppins/5.2.7/latin/500/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:500;src:url(/cf-fonts/s/poppins/5.2.7/latin-ext/500/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:500;src:url(/cf-fonts/s/poppins/5.2.7/devanagari/500/normal.woff2);unicode-range:U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+20F0,U+25CC,U+A830-A839,U+A8E0-A8FF,U+11B00-11B09;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:600;src:url(/cf-fonts/s/poppins/5.2.7/latin/600/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:600;src:url(/cf-fonts/s/poppins/5.2.7/latin-ext/600/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:600;src:url(/cf-fonts/s/poppins/5.2.7/devanagari/600/normal.woff2);unicode-range:U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+20F0,U+25CC,U+A830-A839,U+A8E0-A8FF,U+11B00-11B09;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:700;src:url(/cf-fonts/s/poppins/5.2.7/devanagari/700/normal.woff2);unicode-range:U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+20F0,U+25CC,U+A830-A839,U+A8E0-A8FF,U+11B00-11B09;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:700;src:url(/cf-fonts/s/poppins/5.2.7/latin/700/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'Poppins';font-style:normal;font-weight:700;src:url(/cf-fonts/s/poppins/5.2.7/latin-ext/700/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'PT Serif';font-style:normal;font-weight:400;src:url(/cf-fonts/s/pt-serif/5.2.8/cyrillic-ext/400/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:'PT Serif';font-style:normal;font-weight:400;src:url(/cf-fonts/s/pt-serif/5.2.8/cyrillic/400/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:'PT Serif';font-style:normal;font-weight:400;src:url(/cf-fonts/s/pt-serif/5.2.8/latin-ext/400/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:'PT Serif';font-style:normal;font-weight:400;src:url(/cf-fonts/s/pt-serif/5.2.8/latin/400/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'PT Serif';font-style:italic;font-weight:400;src:url(/cf-fonts/s/pt-serif/5.2.8/cyrillic-ext/400/italic.woff2);unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:'PT Serif';font-style:italic;font-weight:400;src:url(/cf-fonts/s/pt-serif/5.2.8/latin/400/italic.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:'PT Serif';font-style:italic;font-weight:400;src:url(/cf-fonts/s/pt-serif/5.2.8/cyrillic/400/italic.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:'PT Serif';font-style:italic;font-weight:400;src:url(/cf-fonts/s/pt-serif/5.2.8/latin-ext/400/italic.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}</style>
+	<link rel="stylesheet" href="/css/bootstrap.css?v=11" type="text/css" />
+	<link rel="stylesheet" href="/css/style.css?v=11" type="text/css" />
+	<link rel="stylesheet" href="/css/swiper.css?v=11" type="text/css" />
+	<link rel="stylesheet" href="/css/font-icons.css?v=11" type="text/css" />
+	<link rel="stylesheet" href="/css/animate.css?v=11" type="text/css" />
+	<link rel="stylesheet" href="/css/magnific-popup.css?v=11" type="text/css" />
+	<!-- InstanceBeginEditable name="MoreStyles" --><!-- InstanceEndEditable -->
+	<link rel="stylesheet" href="/css/custom.css?v=11" type="text/css" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	
+	<link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/apple-touch-icon.png?v=1">
+	<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon/favicon-32x32.png?v=1">
+	<link rel="icon" type="image/png" sizes="16x16" href="/images/favicon/favicon-16x16.png?v=1">
+	<link rel="manifest" href="/images/favicon/site.webmanifest?v=1">
+	<link rel="mask-icon" href="/images/favicon/safari-pinned-tab.svg?v=1" color="#004d96">
+	<link rel="shortcut icon" href="/images/favicon/favicon.ico?v=1">
+	<meta name="apple-mobile-web-app-title" content="AIA">
+	<meta name="application-name" content="AIA">
+	<meta name="msapplication-TileColor" content="#004d96">
+	<meta name="msapplication-TileImage" content="/images/favicon/mstile-144x144.png?v=1">
+	<meta name="msapplication-config" content="/images/favicon/browserconfig.xml?v=1">
+	<meta name="theme-color" content="#004d96">
+
+	<!-- Document Title
+	============================================= -->
+	<!-- InstanceBeginEditable name="doctitle" -->
+	<title>SERIE A ENILIVE - DESIGNAZIONI 10a GIORNATA - Associazione Italiana Arbitri | FIGC</title>
+	<meta property="og:title" content="SERIE A ENILIVE - DESIGNAZIONI 10a GIORNATA" />
+	
+	<meta property="og:description" content="Arbitri, assistenti, IV ufficiali, VAR e AVAR che dirigeranno le gare valide per la 10ª giornata del Campionato di Serie A in programma da sabato 31 ottobre a lunedì 2 novembre.
+" />
+	
+	<meta property="og:type" content="article" />
+	
+	<meta property="og:article:published_time" content="2026-10-30" />
+	<meta property="og:url" content="https://www.aia-figc.it" />
+	<meta property="og:image" content="https://www.aia-figc.it/media/news/28806/guida (12).jpg" />
+	
+	<meta property="og:image:width" content="1920" />
+	<meta property="og:image:height" content="1079" />
+	
+	<!-- InstanceEndEditable -->
+	<!-- InstanceBeginEditable name="head" --><!-- InstanceEndEditable -->
+	
+	
+</head>
+
+<body id="AIA" class="stretched">
+	<!-- Google Tag Manager (noscript) -->
+	<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MC2XNG9"
+	height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+	<!-- End Google Tag Manager (noscript) -->
+
+	<!-- Document Wrapper
+	============================================= -->
+	<div id="wrapper" class="clearfix">
+
+		<!-- Header
+		============================================= -->
+		<header id="header" class="full-header dark" data-mobile-sticky="true">
+			<div id="header-wrap">
+				<div class="container">
+					<div class="header-row">
+
+						<!-- Logo
+						============================================= -->
+						<div id="logo">
+							
+							<a href="/" class="standard-logo" data-dark-logo="/images/logo.png"><img src="/images/logo.png" alt="Logo AIA"></a>
+							<a href="/" class="retina-logo" data-dark-logo="/images/logo@2x.png"><img src="/images/logo@2x.png" alt="Logo AIA"></a>
+							
+						</div><!-- #logo end -->
+						
+						
+
+						<div id="primary-menu-trigger">
+							<svg class="svg-trigger" viewBox="0 0 100 100"><path d="m 30,33 h 40 c 3.722839,0 7.5,3.126468 7.5,8.578427 0,5.451959 -2.727029,8.421573 -7.5,8.421573 h -20"></path><path d="m 30,50 h 40"></path><path d="m 70,67 h -40 c 0,0 -7.5,-0.802118 -7.5,-8.365747 0,-7.563629 7.5,-8.634253 7.5,-8.634253 h 20"></path></svg>
+						</div>
+
+						<!-- Primary Navigation
+============================================= -->
+<nav class="primary-menu">
+
+	<ul class="menu-container">
+		<li class="menu-item">
+			<a class="menu-link" href="#"><div>News</div></a>
+			<ul class="sub-menu-container">
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/?c=6"><div>﻿Dalle Sezioni</div></a>
+				</li>
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/?c=7"><div>﻿Dai CRA / CPA</div></a>
+				</li>
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/?c=5"><div>﻿Presidenza AIA</div></a>
+				</li>
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/?c=4"><div>﻿Comitato Nazionale</div></a>
+				</li>
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/?c=3"><div>﻿Commissioni Nazionali</div></a>
+				</li>
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/?c=2"><div>﻿Attività Internazionale</div></a>
+				</li>
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/?c=8"><div>﻿Settore Tecnico</div></a>
+				</li>
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/?c=1"><div>﻿Attività Nazionale</div></a>
+				</li>
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/?c=11,12"><div>﻿AIA Community</div></a>
+				</li>
+				
+				<li class="menu-item">
+					<a class="menu-link" href="/news/"><div>Tutte le news</div></a>
+				</li>
+			</ul>
+		</li>
+		<li class="menu-item">
+			<a class="menu-link" href="#"><div>Associazione</div></a>
+			<ul class="sub-menu-container">
+				<li class="menu-item">
+					<a class="menu-link" href="/associazione/organigramma/"><div>Organigramma</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/associazione/cra/"><div>Comitati regionali</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/associazione/sezioni/"><div>Sezioni</div></a>
+				</li>
+			</ul>
+		</li>
+		<li class="menu-item d-block d-md-block d-lg-none d-xl-block">
+			<a class="menu-link" href="/associazione/sezioni/"><div>Le Sezioni</div></a>
+		</li>
+		<li class="menu-item">
+			<a class="menu-link" href="#"><div>Organici</div></a>
+			<ul class="sub-menu-container">
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/can/"><div>C.A.N.</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/canc/"><div>C.A.N. C</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/cand/"><div>C.A.N. D</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/cai/"><div>C.A.I.</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/can5elite/"><div>C.A.N. 5 ELITE</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/can5/"><div>C.A.N. 5</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/canbs/"><div>C.A.N. BS</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/con/"><div>C.O.N.</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/con5/"><div>C.O.N. 5</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/organici/conbs/"><div>C.O.N. BS</div></a>
+				</li>
+			</ul>
+		</li>
+		<li class="menu-item">
+			<a class="menu-link" href="#"><div>Designazioni</div></a>
+			<ul class="sub-menu-container">
+				<li class="menu-item">
+					<a class="menu-link" href="/designazioni/can/"><div>C.A.N.</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/designazioni/canc/"><div>C.A.N. C</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/designazioni/cand/"><div>C.A.N. D</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/designazioni/cai/"><div>C.A.I.</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/designazioni/can5elite/"><div>C.A.N. 5 ELITE</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/designazioni/can5/"><div>C.A.N. 5</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/designazioni/canbs/"><div>C.A.N. BS</div></a>
+				</li>
+				<li class="menu-item">
+					<a class="menu-link" href="/designazioni/"><div>C.R.A. E SEZIONI</div></a>
+				</li>
+			</ul>
+		</li>
+		<li class="menu-item">
+			<a class="menu-link" href="/download/"><div>Download</div></a>
+		</li>
+		<li class="menu-item">
+			<a class="menu-link" href="/diventarbitro/" target="_blank"><div>#diventarbitro</div></a>
+		</li>
+	</ul>
+
+</nav><!-- #primary-menu end -->
+
+					</div>
+				</div>
+			</div>
+			<div class="header-wrap-clone"></div>
+		</header><!-- #header end -->
+
+		<!-- Page Title
+		============================================= -->
+		<section id="page-title">
+
+			<div class="container clearfix">
+				<!-- InstanceBeginEditable name="Page Title" -->
+				<h1>
+					SERIE A ENILIVE - DESIGNAZIONI 10a GIORNATA
+				</h1>
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item"><a href="/">Home</a></li>
+					<li class="breadcrumb-item"><a href="/news/">News</a></li>
+					
+					<li class="breadcrumb-item"><a href="/news/?c=9">﻿Designazioni</a></li>
+					
+					<li class="breadcrumb-item">﻿C.A.N.</li>
+					
+					<li class="breadcrumb-item active" aria-current="page">SERIE A ENILIVE - DESIGNAZIONI 10a GIORNATA</li>
+				</ol>
+				<div class="entry-meta">
+					<ul>
+						<li><i class="icon-calendar3"></i> 30/10/2026</li>
+						
+					</ul>
+				</div>
+				<!-- InstanceEndEditable -->			</div>
+
+		</section><!-- #page-title end -->
+		
+		<!-- InstanceBeginEditable name="Sub Menu" --><!-- InstanceEndEditable -->
+		
+		<!-- Content
+		============================================= -->
+		<section id="content">
+			<div class="content-wrap">
+				<div class="container clearfix">
+				<!-- InstanceBeginEditable name="Content" -->
+					<div class="overflow-hidden">
+						
+						<p><img data-src="/media/news/28806/guida (12).jpg" class="lazy w-100" width="450" height="auto" alt="SERIE A ENILIVE - DESIGNAZIONI 10a GIORNATA"></p>
+						
+						<p><p style="margin-right:19px"><strong>BOLOGNA &ndash; MONZA&nbsp; &nbsp;&nbsp;</strong><em>Sabato 31/10 h. 15.00</em></p>
+
+<p style="margin-right:19px">ZANOTTI</p>
+
+<p style="margin-right:19px">BINDONI &ndash; ZEZZA</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ZUFFERLI</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp;&nbsp;&nbsp; DIONISI</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PAGANESSI</p>
+
+<p style="margin-left:9px; margin-right:19px">&nbsp;</p>
+
+<p style="margin-right:19px"><strong>UDINESE &ndash; ROMA&nbsp; &nbsp;&nbsp;</strong><em>Sabato 31/10 h. 18.00</em></p>
+
+<p style="margin-right:19px">MARESCA</p>
+
+<p style="margin-right:19px">LO CICERO &ndash; ROSSI L.</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CHIFFI</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp;&nbsp;&nbsp; PATERNA</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;AURELIANO</p>
+
+<p style="margin-right:19px">&nbsp;</p>
+
+<p style="margin-right:19px"><strong>MILAN &ndash; INTER&nbsp; &nbsp;&nbsp;</strong><em>Sabato 31/10 h. 20.45</em></p>
+
+<p style="margin-right:19px">GUIDA (<em>foto</em>)</p>
+
+<p style="margin-right:19px">PERETTI &ndash; PERROTTI</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DI BELLO</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;MAZZOLENI</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;CAMPLONE</p>
+
+<p style="margin-right:19px">&nbsp;</p>
+
+<p style="margin-right:19px"><strong>COMO &ndash; VENEZIA&nbsp; &nbsp;&nbsp;</strong><em>&nbsp;h. 12.30</em></p>
+
+<p style="margin-right:19px">FERRIERI CAPUTI</p>
+
+<p style="margin-right:19px">ROSSI M. &ndash; SCATRAGLI</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp; &nbsp;&nbsp;PAIRETTO</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;COSSO</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp;&nbsp;&nbsp; GIUA</p>
+
+<p style="margin-right:19px">&nbsp;</p>
+
+<p style="margin-right:19px"><strong>FROSINONE &ndash; TORINO&nbsp; &nbsp;&nbsp;</strong><em>&nbsp;h. 15.00</em></p>
+
+<p style="margin-right:19px">MUCERA</p>
+
+<p style="margin-right:19px">DI GIOIA &ndash; FONTEMURATO</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;MARIANI</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp;&nbsp; &nbsp;GHERSINI</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp; &nbsp;VOLPI</p>
+
+<p style="margin-right:19px">&nbsp;</p>
+
+<p style="margin-right:19px"><strong>LAZIO &ndash; CAGLIARI&nbsp; &nbsp;&nbsp;</strong><em>&nbsp;h. 15.00</em></p>
+
+<p style="margin-right:19px">COLOMBO</p>
+
+<p style="margin-right:19px">PALERMO &ndash; MASTRODONATO</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp;&nbsp; &nbsp;ABISSO</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp;&nbsp; &nbsp;PEZZUTO</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;DIONISI</p>
+
+<p style="margin-right:19px">&nbsp;</p>
+
+<p style="margin-right:19px"><strong>LECCE &ndash; GENOA&nbsp; &nbsp;&nbsp;</strong><em>&nbsp;h. 18.00</em></p>
+
+<p style="margin-right:19px">MARCHETTI</p>
+
+<p style="margin-right:19px">BAHRI &ndash; CECCONI</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp; &nbsp;&nbsp;FELICIANI</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp;&nbsp; &nbsp;MAGGIONI</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp;&nbsp; &nbsp;RUTELLA</p>
+
+<p style="margin-right:19px">&nbsp;</p>
+
+<p style="margin-right:19px"><strong>JUVENTUS &ndash; NAPOLI&nbsp; &nbsp;&nbsp;</strong><em>&nbsp;h. 20.45</em></p>
+
+<p style="margin-right:19px">SOZZA</p>
+
+<p style="margin-right:19px">IMPERIALE &ndash; COLAROSSI</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp;&nbsp; &nbsp;DOVERI</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp;&nbsp;&nbsp; MERAVIGLIA</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;GARIGLIO</p>
+
+<p style="margin-right:19px">&nbsp;</p>
+
+<p style="margin-right:19px"><strong>SASSUOLO &ndash; FIORENTINA&nbsp; &nbsp;&nbsp;</strong><em>Luned&igrave; 02/11 h. 18.30</em></p>
+
+<p style="margin-right:19px">MARCENARO</p>
+
+<p style="margin-right:19px">DEI GIUDICI &ndash; BIANCHINI</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;AYROLDI</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; AURELIANO</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;PEZZUTO</p>
+
+<p style="margin-right:19px"><strong>&nbsp;</strong></p>
+
+<p style="margin-right:19px"><strong>ATALANTA &ndash; PARMA&nbsp; &nbsp;&nbsp;</strong><em>Luned&igrave; 02/11 h. 20.45</em></p>
+
+<p style="margin-right:19px">CREZZINI</p>
+
+<p style="margin-right:19px">LAUDATO &ndash; BOATO</p>
+
+<p style="margin-right:19px">IV:&nbsp;&nbsp;&nbsp; &nbsp;COLLU</p>
+
+<p style="margin-right:19px">VAR:&nbsp;&nbsp; &nbsp;PRONTERA</p>
+
+<p style="margin-right:19px">AVAR:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; MERAVIGLIA</p>
+</p>
+						
+					</div>
+					<div class="row align-items-center news-dettaglio-disclaimer-rivista">
+						<div class="col-12 col-md-6 text-center text-md-start">
+							<span>
+								Supplemento on-line della rivista "L'Arbitro" <br>
+								(aut. Tribunale di Roma n. 499 del 01/09/1989)
+							</span>
+						</div>
+						<div class="col-12 col-md-6 mt-3 mt-md-0">
+							<div class="news-dettaglio-social m-auto me-md-0">
+								<a href="https://www.facebook.com/sharer.php?u=https%3A%2F%2Fwww%2Eaia%2Dfigc%2Eit" class="social-icon si-colored si-facebook" target="_blank">
+									<i class="icon-facebook icon-normal"></i>
+									<i class="icon-facebook"></i>
+								</a>
+								<a href="https://twitter.com/share?url=https%3A%2F%2Fwww%2Eaia%2Dfigc%2Eit&text=SERIE+A+ENILIVE+%2D+DESIGNAZIONI+10a+GIORNATA+%2D+Associazione+Italiana+Arbitri+%7C+FIGC" class="social-icon si-colored si-twitter" target="_blank">
+									<i class="icon-twitter icon-normal"></i>
+									<i class="icon-twitter"></i>
+								</a>
+								<a href="https://api.whatsapp.com/send?text=SERIE+A+ENILIVE+%2D+DESIGNAZIONI+10a+GIORNATA+%2D+Associazione+Italiana+Arbitri+%7C+FIGC%0D%0Ahttps%3A%2F%2Fwww%2Eaia%2Dfigc%2Eit" class="social-icon si-colored si-whatsapp" target="_blank">
+									<i class="icon-whatsapp icon-normal"></i>
+									<i class="icon-whatsapp"></i>
+								</a>
+								<a href="https://t.me/share/url?url=https%3A%2F%2Fwww%2Eaia%2Dfigc%2Eit&text=SERIE+A+ENILIVE+%2D+DESIGNAZIONI+10a+GIORNATA+%2D+Associazione+Italiana+Arbitri+%7C+FIGC" class="social-icon si-colored si-telegram" target="_blank">
+									<i class="icon-telegram-plane icon-normal"></i>
+									<i class="icon-telegram-plane"></i>
+								</a>
+								<a href="/cdn-cgi/l/email-protection#506f2325323a3533246d1c353737397021253523243f6a700315021915701170151e191c190615707d7014150319171e110a191f1e19706160317017191f021e110411707d701123233f3339312a393f3e35701924313c39313e317011223239242239702c701619171376323f34296d1339313f7c756014756011756014756011043970333f3e2339373c393f703439703c35373735223570212535232431703e3527237e7560147560117560147560110315021915701170151e191c190615707d7014150319171e110a191f1e19706160317017191f021e110411707d701123233f3339312a393f3e35701924313c39313e317011223239242239702c701619171375601475601138242420236a7f7f2727277e3139317d363937337e3924" class="social-icon si-colored si-email3">
+									<i class="icon-email3 icon-normal"></i>
+									<i class="icon-email3"></i>
+								</a>
+							</div>
+						</div>
+					</div>
+					
+					
+				<!-- InstanceEndEditable -->
+				</div>
+			</div>
+
+			<!-- Search modal -->
+			<div class="modal fade" id="searchModal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+				<div class="modal-dialog modal-lg modal-dialog-centered">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h4 class="modal-title" id="searchModalLabel">Ricerca nel sito</h4>
+							<button type="button" class="btn-close btn-sm" data-bs-dismiss="modal" aria-hidden="true"></button>
+						</div>
+						<div class="modal-body">
+							<form action="search.html" method="get">
+								<input type="text" name="q" class="form-control" value="" placeholder="Fai qui la tua ricerca..." autocomplete="off">
+							</form>
+						</div>
+						<div class="modal-footer" style="justify-content: space-between;">
+							<button type="button" class="button button-3d button-dark button-rounded" data-bs-dismiss="modal">Chiudi</button>
+							<button type="button" class="button button-3d button-rounded">Cerca</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section><!-- #content end -->
+
+		<!-- Footer
+============================================= -->
+<footer id="footer">
+  <div class="container"> 
+    
+    <!-- Footer Widgets
+		============================================= -->
+    <div class="footer-widgets-wrap">
+      <div class="row col-mb-50">
+        <div class="col-lg-12">
+          <div class="row col-mb-50">
+            <div class="col-md-4 text-center text-md-start colonna-1">
+              <div class="widget clearfix"> <img data-src="/images/logo.png" alt="Logo AIA" class="lazy footer-logo" style="display: unset;">
+                <p>Via Campania 47<br>
+                  00187 Roma</p>
+              </div>
+            </div>
+            <div class="col-md-4 text-center colonna-2">
+              <div class="widget widget_links clearfix" style="width: fit-content;">
+                <ul>
+                  <li><a href="/news/">News</a></li>
+                  
+                  <li><a href="/news/?c=6">﻿Dalle Sezioni</a></li>
+                  
+                  <li><a href="/news/?c=7">﻿Dai CRA / CPA</a></li>
+                  
+                  <li><a href="/news/?c=5">﻿Presidenza AIA</a></li>
+                  
+                  <li><a href="/news/?c=4">﻿Comitato Nazionale</a></li>
+                  
+                  <li><a href="/news/?c=3">﻿Commissioni Nazionali</a></li>
+                  
+                  <li><a href="/news/?c=2">﻿Attività Internazionale</a></li>
+                  
+                  <li><a href="/news/?c=8">﻿Settore Tecnico</a></li>
+                  
+                  <li><a href="/news/?c=1">﻿Attività Nazionale</a></li>
+                  
+                  <li><a href="/news/?c=11,12">﻿AIA Community</a></li>
+                  
+                  <li class="d-md-none"><a href="/associazione/sezioni/">Le Sezioni</a></li>
+                  <li class="d-md-none"><a href="/organici/">Organici</a></li>
+                  <li class="d-md-none"><a href="/designazioni/">Designazioni</a></li>
+                  <li class="d-md-none"><a href="/download/">Download</a></li>
+                  <li class="d-md-none"><a href="/diventarbitro/">#diventarbitro</a></li>
+                  <li class="d-md-none mt-3"><a href="/trasparenza/">Trasparenza</a></li>
+                  <li class="d-md-none mt-3"><a href="/private/" target="_blank">Area Riservata</a></li>
+                  <li class="d-md-none"><a href="/private/?area=settoretecnico" target="_blank">Area Settore Tecnico</a></li>
+                  <li class="d-md-none"><a href="https://formazione.aia-figc.it" target="_blank">Portale Formazione</a></li>
+                </ul>
+              </div>
+            </div>
+            <div class="col-md-4 text-center text-md-end colonna-3 ">
+              <div class="widget widget_links clearfix d-none d-md-block" style="width: fit-content;">
+                <ul>
+                  <li><a href="/associazione/sezioni/">Le Sezioni</a></li>
+                  <li><a href="/organici/">Organici</a></li>
+                  <li><a href="/designazioni/">Designazioni</a></li>
+                  <li><a href="/download/">Download</a></li>
+                  <li><a href="/diventarbitro/">#diventarbitro</a></li>
+                  <li class="mt-3"><a href="/trasparenza/">Trasparenza</a></li>
+                  <li class="mt-3"><a href="/private/" target="_blank">Area Riservata</a></li>
+                  <li><a href="/private/?area=settoretecnico" target="_blank">Area Settore Tecnico</a></li>
+                  <li><a href="https://formazione.aia-figc.it" target="_blank">Portale Formazione</a></li>
+                </ul>
+              </div>
+              <div class="social_channels row mt-3">
+                <div class="col-3"> <a href="https://www.facebook.com/aiafigc" class="social-icon si-light si-facebook me-2" target="_blank"> <i class="icon-facebook icon-blue"></i> <i class="icon-facebook icon-normal"></i> </a> </div>
+                <div class="col-3"> <a href="https://twitter.com/AIA_it" class="social-icon si-light si-twitter me-2" target="_blank"> <i class="icon-twitter icon-blue"></i> <i class="icon-twitter icon-normal"></i> </a> </div>
+                <!--<div class="break"></div>-->
+                <div class="col-3"> <a href="https://www.instagram.com/aia_it/" class="social-icon si-light si-instagram me-2" target="_blank"> <i class="icon-instagram icon-blue"></i> <i class="icon-instagram icon-normal"></i> </a> </div>
+                <div class="col-3"> <a href="https://www.tiktok.com/@aia_it" class="social-icon si-light si-tiktok me-2" target="_blank"> <i class="icon-tiktok icon-blue"></i> <i class="icon-tiktok icon-normal"></i> </a> </div>
+                <div class="col-3"> <a href="https://www.youtube.com/aialarbitro" class="social-icon si-light si-youtube me-2" target="_blank"> <i class="icon-youtube icon-blue"></i> <i class="icon-youtube icon-normal"></i> </a> </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- .footer-widgets-wrap end --> 
+  
+  <!-- Copyrights
+	============================================= -->
+  <div id="copyrights" class="dark">
+    <div class="container">
+      <div class="row col-mb-30">
+        <div class="col-md-12 text-center pb-5"> <strong>I nostri sponsor</strong><br>
+	<br>
+	<div style="display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1rem;">
+		<a href="https://www.netinsurance.it/" target="_blank"><img src="/images/sponsor/net-insurance.png?v=3" style="width: 120px;"></a>
+		<a href="https://givova.it/" target="_blank"><img src="/images/sponsor/givova.png?v=3" style="width: 120px;"></a>
+		<a href="https://acqualete.it/" target="_blank"><img src="/images/sponsor/lete.png?v=3" style="width: 120px;"></a>
+		<a href="https://danjohn.com/" target="_blank"><img src="/images/sponsor/dan-john.png?v=3" style="width: 120px;"></a>
+	</div>
+</div>
+<div class="col-md-12 text-center pb-5"> <strong>Partner solidale</strong><br>
+	<br>
+	<a href="https://www.ail.it/" target="_blank" style=" margin-right: 8px; "><img src="/images/sponsor/ail.png?v=3" style="width: 240px;"></a>
+</div>
+        <div class="col-md-12 text-center">
+          <p>Copyrights &copy;
+            2021-2026
+            Tutti i diritti riservati<br>
+            Associazione Italiana Arbitri</p>
+          <div class="copyright-links"> <a href="https://www.iubenda.com/privacy-policy/40508896" class="iubenda-nostyle no-brand iubenda-noiframe iubenda-embed iubenda-noiframe " title="Privacy Policy ">Privacy Policy</a> / <a href="https://www.iubenda.com/privacy-policy/40508896/cookie-policy" class="iubenda-nostyle no-brand iubenda-noiframe iubenda-embed iubenda-noiframe " title="Cookie Policy ">Cookie Policy</a> 
+            <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="text/javascript">(function (w,d) {var loader = function () {var s = d.createElement("script"), tag = d.getElementsByTagName("script")[0]; s.src="https://cdn.iubenda.com/iubenda.js"; tag.parentNode.insertBefore(s,tag);}; if(w.addEventListener){w.addEventListener("load", loader, false);}else if(w.attachEvent){w.attachEvent("onload", loader);}else{w.onload = loader;}})(window, document);</script> 
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- #copyrights end --> 
+</footer>
+<!-- #footer end -->
+
+	</div><!-- #wrapper end -->
+	
+	<!-- InstanceBeginEditable name="AfterFooter" --><!-- InstanceEndEditable -->
+	
+	<!-- Go To Top
+	============================================= -->
+	<div id="gotoTop" class="icon-angle-up"></div>
+
+	<!-- JavaScripts
+	============================================= -->
+	<script src="/js/jquery.js"></script>
+	<script src="/js/plugins.min.js"></script>
+
+	<!-- Footer Scripts
+	============================================= -->
+	<script src="/js/functions.js"></script>
+	
+	<!-- InstanceBeginEditable name="MoreScripts" --><!-- InstanceEndEditable -->
+</body>
+<!-- InstanceEnd --></html>

@@ -108,3 +108,8 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
 - `utils.scarica_json`: riprova anche le risposte vuote o troncate (usato da `espn` e `espn_dettaglio`). `partite_del_giorno` usa l'ultima copia salvata del giorno se ESPN
   continua a non rispondere; senza copia si ferma come prima (meglio la pagina vecchia che una con giorni mancanti).
 - `server.py`: dopo un aggiornamento non riuscito riprova dopo 3 minuti, poi 10, poi ogni 30 (`attesa_dopo`). Vale dal prossimo avvio di Avvia.
+
+## 01/11/2026: arbitri della domenica spariti (10ª giornata)
+- La pagina AIA della 10ª giornata (ID 28806) per le cinque partite di domenica 1/11 scriveva solo l'ora («h. 12.30»), senza «Domenica 01/11»: `aia._interpreta`
+  voleva il giorno nella riga dopo le squadre e le saltava (archivio con 5 partite su 10, «da designare» nella pagina). Ora accetta anche la sola ora e prende la data
+  della partita prima (il giorno dopo se l'ora è più presto). Test con la pagina vera in `tests/fixtures/aia_designazioni_10a_giornata.html`.
