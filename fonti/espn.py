@@ -3,7 +3,7 @@
 Una chiamata "scoreboard" per giorno e una "summary" per partita. Tutto ciò che è finito
 resta in cache per sempre, quindi dopo la prima esecuzione si scaricano solo le partite nuove.
 """
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from dateutil import tz
 
@@ -114,6 +114,20 @@ def finita(js):
         return False
 
 
+def _da_rileggere(js, percorso, ora=None):
+    """True se il file è stato salvato entro 24 ore dal calcio d'inizio e ora ne sono passate di più: va riletto una volta.
+
+    ESPN corregge i cartellini dopo la partita: per Gaspar (Lecce-Juventus) la copia salvata subito diceva doppio giallo, quella di
+    qualche giorno dopo giallo più rosso diretto, come il tabellino della Lega Serie A."""
+    try:
+        inizio = datetime.strptime(js["header"]["competitions"][0]["date"], "%Y-%m-%dT%H:%MZ")
+    except (KeyError, IndexError, TypeError, ValueError):
+        return False
+    salvato = datetime.fromtimestamp(percorso.stat().st_mtime, timezone.utc).replace(tzinfo=None)
+    ora = ora or datetime.now(timezone.utc).replace(tzinfo=None)
+    return salvato - inizio < timedelta(hours=24) <= ora - inizio
+
+
 def formazioni(id_partita, stato):
     """Formazioni (titolari + panchina) con le statistiche della partita, se disponibili.
 
@@ -123,7 +137,7 @@ def formazioni(id_partita, stato):
     percorso = CACHE / "espn" / "partita_{}.json".format(id_partita)
     vecchio = leggi_json_o(percorso)
     valido = vecchio is not None and fresca(percorso, None if stato == "post" else 0.08)
-    if valido and stato == "post" and not finita(vecchio):
+    if valido and stato == "post" and (not finita(vecchio) or _da_rileggere(vecchio, percorso)):
         valido = False
     if valido:
         js = vecchio

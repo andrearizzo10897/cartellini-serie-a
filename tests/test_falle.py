@@ -1,8 +1,9 @@
 """Le falle trovate dalla revisione critica del 5/11/2026: valore atteso, squalificati, riquadro fonti, omonimi, scritture. Nessuna rete."""
 import json
+import os
 import tempfile
 import unittest
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -313,6 +314,32 @@ class StagioneKickest(unittest.TestCase):
         kick = pd.DataFrame([dict(riga, stagione=2025), dict(riga, stagione=2026)])
         profili = calcoli.ProfiliGiocatori(kick, None, {}, 2026, Presenza())
         self.assertEqual(list(profili.storia["k1"]["stagione"]), [2025])
+
+
+class CorrezioniEspn(unittest.TestCase):
+    """ESPN corregge i cartellini dopo la partita: una copia salvata subito si rilegge una volta, dopo 24 ore."""
+
+    def prova(self, ore_salvato, ore_ora):
+        inizio = datetime(2026, 10, 25, 17, 0)
+        with tempfile.TemporaryDirectory() as t:
+            f = Path(t) / "p.json"
+            f.write_text("{}", encoding="utf-8")
+            salvato = (inizio + timedelta(hours=ore_salvato)).replace(tzinfo=timezone.utc).timestamp()
+            os.utime(f, (salvato, salvato))
+            js = {"header": {"competitions": [{"date": "2026-10-25T17:00Z"}]}}
+            return espn._da_rileggere(js, f, inizio + timedelta(hours=ore_ora))
+
+    def test_salvata_subito_dopo_un_giorno_si_rilegge(self):
+        self.assertTrue(self.prova(3, 30))
+
+    def test_prima_di_un_giorno_si_aspetta(self):
+        self.assertFalse(self.prova(3, 10))
+
+    def test_salvata_tardi_e_definitiva(self):
+        self.assertFalse(self.prova(100, 200))
+
+    def test_senza_data_resta_com_e(self):
+        self.assertFalse(espn._da_rileggere({}, Path("non_serve.json")))
 
 
 class FileSicuri(unittest.TestCase):
