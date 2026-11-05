@@ -27,7 +27,7 @@ jobs:
           path: dati
           key: dati-${{ github.run_id }}
           restore-keys: dati-
-      - run: pip install pandas requests python-dateutil
+      - run: pip install -r requirements.txt
       - name: Chiave API-Football
         run: echo "APIFOOTBALL_KEY=${{ secrets.APIFOOTBALL_KEY }}" > .env
       - run: python aggiorna.py
@@ -49,12 +49,9 @@ jobs:
         if: steps.pw.outputs.ok == 'si'
         env:
           PW: ${{ secrets.PAGINA_PASSWORD }}
-          DT: ${{ secrets.DISPATCH_TOKEN }}
         run: |
           mkdir site
-          # il pulsante Aggiorna online usa questo permesso (dentro la pagina cifrata)
-          if [ -n "$DT" ]; then sed -i "s|__DISPATCH_TOKEN__|$DT|" index.html; fi
-          npx -y staticrypt@3.5.4 index.html -p "$PW" -d site --short --remember 30 \
+          npx -y staticrypt@3.5.4 index.html -p "$PW" -d site --remember 30 \
             --template-title "Cartellini Serie A" \
             --template-instructions "Pagina privata: inserisci la password che ti è stata data." \
             --template-button "Entra" --template-placeholder "Password" \
