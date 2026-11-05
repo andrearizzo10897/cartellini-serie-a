@@ -94,18 +94,28 @@ def integra_con_espn(fd, finite, anno):
     return out, len(righe)
 
 
-def controllo_espn(fd, finite, anno):
-    """(uguali, [partite diverse]): confronta i gialli sommati da ESPN con quelli di football-data sulle partite presenti in entrambi."""
+def controllo_espn(fd, finite, anno, dettagli=None):
+    """(uguali, [partite diverse]): confronta i gialli di ESPN con quelli di football-data sulle partite presenti in entrambi.
+
+    football-data conta i due gialli di un doppio giallo, ESPN e la Lega Serie A nessuno dei due (solo il rosso): verificato il 5/11/2026
+    sui tabellini della Lega. Questa differenza non è un errore e non si segnala; restano le differenze vere, con i numeri delle due fonti."""
     ref = {(r.casa, r.trasf): (r.g_c, r.g_t) for r in fd[fd["stagione"] == anno].itertuples()}
     ok, diversi = 0, []
     for ev, forma in finite:
         if (ev["casa"], ev["trasf"]) in ref and "home" in forma and "away" in forma:
-            e = (int(sum(g["gialli"] for g in forma["home"]["giocatori"])),
-                 int(sum(g["gialli"] for g in forma["away"]["giocatori"])))
-            if e == ref[(ev["casa"], ev["trasf"])]:
+            eventi = (dettagli or {}).get(ev["id"], {}).get("eventi", [])
+            espn, attesi = [], []
+            for lato in ("home", "away"):
+                giocatori = forma[lato]["giocatori"]
+                gialli = int(sum(g["gialli"] for g in giocatori))
+                doppi = sum(1 for g in giocatori if g.get("rossi") and not g["gialli"] and ammonito(g, eventi))
+                espn.append(gialli)
+                attesi.append(gialli + 2 * doppi)
+            fatti = ref[(ev["casa"], ev["trasf"])]
+            if tuple(attesi) == tuple(fatti):
                 ok += 1
             else:
-                diversi.append("{}-{}".format(ev["casa"], ev["trasf"]))
+                diversi.append("{}-{} (ESPN {}-{}, football-data {}-{})".format(ev["casa"], ev["trasf"], espn[0], espn[1], int(fatti[0]), int(fatti[1])))
     return ok, diversi
 
 

@@ -179,6 +179,28 @@ class ArchiviDaNonPerdere(unittest.TestCase):
             self.assertEqual(f.read_text(encoding="utf-8"), '{"tronc')
 
 
+class ControlloGialli(unittest.TestCase):
+    """Numeri veri del 2026/27, confrontati con i tabellini della Lega Serie A il 5/11/2026."""
+
+    def esegui(self, casa, trasf, fatti):
+        fd = pd.DataFrame([{"stagione": 2026, "casa": "genoa", "trasf": "frosinone", "g_c": fatti[0], "g_t": fatti[1]}])
+        forma = {"home": {"giocatori": [g(str(i), gialli=x, rossi=r) for i, (x, r) in enumerate(casa)]},
+                 "away": {"giocatori": [g("t" + str(i), gialli=x, rossi=r) for i, (x, r) in enumerate(trasf)]}}
+        dettagli = {"1": {"eventi": [{"tipo": "yellow-card", "persone": ["0"]}]}}
+        return calcoli.controllo_espn(fd, [({"id": "1", "casa": "genoa", "trasf": "frosinone"}, forma)], 2026, dettagli)
+
+    def test_il_doppio_giallo_non_e_una_differenza(self):
+        # Genoa-Frosinone: Vásquez doppio giallo, Ehizibue un giallo. ESPN 1, football-data 3
+        self.assertEqual(self.esegui([(0, 1), (1, 0)], [(1, 0), (1, 0)], (3, 2)), (1, []))
+
+    def test_una_differenza_vera_si_segnala_con_i_numeri(self):
+        # Roma-Atalanta: rosso diretto senza eventi di giallo, football-data ha un giallo in più
+        self.assertEqual(self.esegui([(0, 0)], [(1, 0), (0, 1)], (1, 1)), (0, ["genoa-frosinone (ESPN 0-1, football-data 1-1)"]))
+
+    def test_rosso_diretto_non_vale_come_doppio_giallo(self):
+        self.assertEqual(self.esegui([(1, 0), (0, 1)], [], (3, 0))[0], 0)            # il giocatore "1" non ha l'evento del giallo
+
+
 class RiquadroFonti(unittest.TestCase):
     ORA = datetime(2026, 11, 1, 12, 0)
 

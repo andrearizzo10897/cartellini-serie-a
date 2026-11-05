@@ -52,7 +52,7 @@ def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti,
             ", ".join("{:%d/%m}".format(g) for g in sorted(set(copie_calendario))), testo)
     fonti.append(("ESPN", "ok" if finite and not copie_calendario else "no", testo))
     if gialli_diversi:
-        fonti.append(("Controllo gialli ESPN / football-data", "att", "{} con un numero di gialli diverso: {}".format(
+        fonti.append(("Controllo gialli ESPN / football-data", "att", "{} con un numero di gialli diverso: {}. Fa fede il tabellino della Lega Serie A.".format(
             _partite(len(gialli_diversi)), ", ".join(gialli_diversi))))
     totale = sum(n_uff.values())
     testo = "ufficiali per {} su {} (ESPN {}, Sky {}, SosFanta {})".format(
@@ -153,7 +153,7 @@ def main():
         stato.append("Transfermarkt non ha risposto (e non c'è la copia salvata): per lo storico dei giocatori uso solo Kickest.")
 
     print("5/5 Calcoli e pagina")
-    ok, diversi = calcoli.controllo_espn(fd, finite, anno)
+    ok, diversi = calcoli.controllo_espn(fd, finite, anno, dettagli)
     print("    controllo gialli ESPN vs football-data: {} uguali, {} diversi".format(ok, len(diversi)))
     fd, aggiunte = calcoli.integra_con_espn(fd, finite, anno)
     if aggiunte:
