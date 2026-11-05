@@ -28,6 +28,7 @@ def _link(ev):
         try:
             testo = scarica(url, headers=UA, pausa=0.1, tentativi=1).text
         except Exception:  # noqa: BLE001 - rete: provo l'elenco dopo
+            sky.problemi.add("SosFanta non risponde")
             continue
         for m in re.finditer(r"https://www\.sosfanta\.com/news/formazioni-ufficiali-([a-z0-9-]+)/", testo):
             if any(m.group(1).startswith(c + "-") or m.group(1) == c for c in cercati):
@@ -66,7 +67,11 @@ def ufficiali(ev, ultima_formazione, tradotti=None):
     try:
         r = scarica(url, headers=UA, pausa=0.1, tentativi=1)
     except Exception:  # noqa: BLE001
+        sky.problemi.add("SosFanta non risponde")
         return None
     pulito = re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", " ", r.text)
     testo = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", pulito)))
-    return sky.da_nomi(ev, ultima_formazione, _estrai(testo, ev), tradotti)
+    estratte = _estrai(testo, ev)
+    if estratte is None:
+        sky.problemi.add("articolo di SosFanta illeggibile (formato cambiato?)")
+    return sky.da_nomi(ev, ultima_formazione, estratte, tradotti)

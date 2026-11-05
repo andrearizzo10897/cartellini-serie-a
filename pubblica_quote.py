@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 import config
-from fonti import daznbet, transfermarkt
+from fonti import aia, daznbet, transfermarkt
 
 
 def git(*args):
@@ -27,6 +27,9 @@ def pubblica(nuove):
     daznbet.salva(nuove)  # l'orario cambia a ogni controllo, quindi c'è sempre qualcosa da pubblicare
     # con le quote parte anche l'archivio Transfermarkt delle stagioni finite, se è cambiato (GitHub non può leggere il sito)
     file = [daznbet.FILE.name] + ([transfermarkt.ARCHIVIO.name] if transfermarkt.ARCHIVIO.exists() else [])
+    # e le designazioni AIA: ESPN non dà più l'arbitro e il sito AIA mostra solo le ultime giornate, se GitHub perde la cache servono queste
+    if aia.ARCHIVIO.exists():
+        file.append(aia.ARCHIVIO.relative_to(config.BASE).as_posix())
     git("add", *file)
     if not git("status", "--porcelain", "--", *file).strip():
         return "Quote DAZN Bet già pubblicate."

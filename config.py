@@ -48,3 +48,10 @@ def leggi_env():
                 k, v = riga.split("=", 1)
                 valori[k.strip()] = v.strip().strip('"').strip("'")
     return valori
+
+# Valore atteso delle quote DAZN Bet: si mostra solo con formazioni ufficiali e quote fresche, scaricate a ridosso delle ufficiali
+QUOTE_MAX_ORE = 2
+QUOTE_PRIMA_DEL_FISCHIO_MIN = 90   # le ufficiali escono circa un'ora prima: quote più vecchie non ne tengono conto
+PRUDENZA_EV = 0.8                  # il verde richiede un valore atteso positivo anche con il 20% di probabilità in meno
+# Numero del giallo che fa scattare la squalifica in Serie A (verificato sui dati 2025/26, vedi NOTE_PER_CLAUDE.md)
+SOGLIE_SQUALIFICA = (5, 10, 14, 17)

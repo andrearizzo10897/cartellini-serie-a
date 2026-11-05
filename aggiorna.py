@@ -31,8 +31,13 @@ def _partite(n):
 
 
 def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti, kickest_corrente, n_tm,
-                    quote_giocatori, nota_quote, quote_ora, n_uff, cercate, partite):
-    """[(sito, livello, testo)] per il riquadro "Fonti di questo aggiornamento": livello ok / att (attenzione) / no."""
+                    quote_giocatori, nota_quote, quote_ora, n_uff, cercate, partite, ora=None, copie_calendario=(),
+                    problemi_formazioni=(), gialli_diversi=(), senza_arbitro_espn=0, senza_arbitro=0, errore_pubblica=None):
+    """[(sito, livello, testo)] per il riquadro "Fonti di questo aggiornamento": livello ok / att (attenzione) / no.
+
+    «ok» vuol dire che il dato serve così com'è: una fonte che risponde ma lascia un buco dove serve non è «ok». I «no» compaiono
+    anche in cima alla scheda Partite."""
+    ora = ora or config.adesso()
     fonti = []
     # football-data ritarda di qualche giorno e le partite mancanti le ricavo da ESPN: la riga serve solo se è davvero ferma
     ritardo = (oggi - ultimo_fd).days
@@ -41,21 +46,34 @@ def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti,
                                                    "le quote storiche".format(ultimo_fd)))
     con_quote = sum(1 for e in prossime if e.get("quote"))
     non_ancora = " ({} non ancora in football-data)".format(aggiunte) if aggiunte else ""
-    fonti.append(("ESPN", "ok" if finite else "no",
-                  "{} finite lette{}, {} in programma ({} con le quote 1X2)".format(
-                      _partite(len(finite)), non_ancora, len(prossime), con_quote)))
+    testo = "{} finite lette{}, {} in programma ({} con le quote 1X2)".format(_partite(len(finite)), non_ancora, len(prossime), con_quote)
+    if copie_calendario:
+        testo = "ESPN non ha risposto: il calendario del {} è una copia salvata, partite e orari possono essere vecchi. {}".format(
+            ", ".join("{:%d/%m}".format(g) for g in sorted(set(copie_calendario))), testo)
+    fonti.append(("ESPN", "ok" if finite and not copie_calendario else "no", testo))
+    if gialli_diversi:
+        fonti.append(("Controllo gialli ESPN / football-data", "att", "{} con un numero di gialli diverso: {}".format(
+            _partite(len(gialli_diversi)), ", ".join(gialli_diversi))))
     totale = sum(n_uff.values())
     testo = "ufficiali per {} su {} (ESPN {}, Sky {}, SosFanta {})".format(
         _partite(totale), len(prossime), n_uff["ESPN"], n_uff["Sky"], n_uff["SosFanta"])
-    if cercate and not (n_uff["Sky"] or n_uff["SosFanta"]):
+    if problemi_formazioni:
+        testo += "; da controllare: " + ", ".join(sorted(problemi_formazioni))
+    elif cercate and not (n_uff["Sky"] or n_uff["SosFanta"]):
         testo += "; per {} vicin{} al calcio d'inizio Sky e SosFanta non hanno ancora pubblicato".format(
             _partite(cercate), "a" if cercate == 1 else "e")
-    fonti.append(("Formazioni ufficiali", "ok", testo))
-    if nota_quote:
-        fonti.append(("DAZN Bet", "att", nota_quote))
-    elif quote_giocatori:
+    # le ufficiali escono circa un'ora prima: a 45 minuti dal fischio dovrebbero esserci
+    in_ritardo = [p for p in partite if "ev" in p and not p.get("ufficiale")
+                  and timedelta(0) < p["ev"]["inizio"] - ora < timedelta(minutes=45)]
+    fonti.append(("Formazioni ufficiali", "att" if in_ritardo or problemi_formazioni else "ok", testo))
+    fresche = quote_ora is not None and (ora - quote_ora).total_seconds() <= config.QUOTE_MAX_ORE * 3600
+    if quote_giocatori and fresche and not errore_pubblica:
         fonti.append(("DAZN Bet", "ok", "quote «ammonito» per {}, scaricate alle {:%H:%M}".format(
             _partite(len(quote_giocatori)), quote_ora)))
+    elif errore_pubblica:
+        fonti.append(("DAZN Bet", "att", "scaricate ma non pubblicate online: {}".format(errore_pubblica)))
+    elif quote_giocatori or nota_quote:
+        fonti.append(("DAZN Bet", "att" if quote_giocatori else "no", nota_quote or "quote vecchie: il valore atteso non è mostrato"))
     else:
         fonti.append(("DAZN Bet", "no", "nessuna quota ricevuta"))
     fonti.append(("Transfermarkt (storico principale)", "ok" if n_tm else "att",
@@ -67,8 +85,17 @@ def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti,
         fonti.append(("Kickest (riserva, falli e contrasti)", "ok", "stagioni passate caricate" + ("" if kickest_corrente else
                       "; il {}/{} non è ancora pubblicato, per quella in corso uso ESPN".format(anno, str(anno + 1)[2:]))))
     con_arbitro = sum(1 for p in partite if p["arbitro"])
-    fonti.append(("Arbitri (AIA)", "ok" if con_arbitro else "att",
-                  "designati per {} su {}".format(_partite(con_arbitro), len(partite))))
+    testo = "designati per {} su {}".format(_partite(con_arbitro), len(partite))
+    # l'AIA pubblica il giorno prima della giornata: a meno di 24 ore l'arbitro deve esserci (il 1/11 ne erano spariti 5 su 10 in silenzio)
+    senza = [p["ev"] for p in partite if "ev" in p and not p["arbitro"] and p["ev"]["inizio"] - ora < timedelta(hours=24)]
+    if senza:
+        testo = "manca l'arbitro di {}, che si gioca entro 24 ore: la stima non ne tiene conto. {}".format(
+            ", ".join("{}-{}".format(e["casa"], e["trasf"]) for e in senza), testo)
+    fonti.append(("Arbitri (AIA)", "no" if senza else "ok", testo))
+    if senza_arbitro_espn or senza_arbitro:
+        fonti.append(("Arbitri delle partite giocate", "att" if senza_arbitro else "ok",
+                      "ESPN non indica l'arbitro per {}: lo storico di quest'anno dipende dall'archivio AIA{}".format(
+                          _partite(senza_arbitro_espn), "; {} senza arbitro".format(_partite(senza_arbitro)) if senza_arbitro else "")))
     return fonti
 
 
@@ -127,7 +154,7 @@ def main():
 
     print("5/5 Calcoli e pagina")
     ok, diversi = calcoli.controllo_espn(fd, finite, anno)
-    print("    controllo gialli ESPN vs football-data: {} uguali, {} diversi".format(ok, diversi))
+    print("    controllo gialli ESPN vs football-data: {} uguali, {} diversi".format(ok, len(diversi)))
     fd, aggiunte = calcoli.integra_con_espn(fd, finite, anno)
     if aggiunte:
         stato.append("{} partite recenti non ancora nel file di football-data sono state ricavate da ESPN."
@@ -137,17 +164,21 @@ def main():
     df = calcoli.aggiungi_tipo(df, tabelle, anno)
     lungo = calcoli.formato_lungo(df)
     giocatori_espn, ultima_formazione = calcoli.aggrega_espn(finite)
+    squalificati = calcoli.squalificati(finite)
     poisson, stato_modello = calcoli.prepara_modello(df)
     modello_presenza = presenza.ModelloPresenza(dettagli, stagione_corrente=anno)
     quote_giocatori, nota_quote, quote_ora = daznbet.carica()
+    errore_pubblica = None
     if nota_quote:
         stato.append(nota_quote)
     elif quote_giocatori and not os.environ.get("GITHUB_ACTIONS"):
         # scaricate ora dal PC: le pubblico, così le legge anche la pagina online (GitHub non raggiunge DAZN Bet)
         try:
             print("    " + pubblica_quote.pubblica(quote_giocatori))
-        except RuntimeError as e:
+        except (RuntimeError, OSError) as e:   # git che rifiuta, file bloccato: la pagina si genera lo stesso
             print("    quote DAZN Bet non pubblicate online: {}".format(e))
+            errore_pubblica = str(e).splitlines()[0][:200]
+            stato.append("Quote DAZN Bet scaricate ma non pubblicate online: la pagina online resta con quelle vecchie ({}).".format(errore_pubblica))
     ctx = {
         "quote_giocatori": quote_giocatori, "quote_ora": quote_ora,
         "anno": anno, "df": df, "lungo": lungo, "tabelle": tabelle, "designazioni": designazioni,
@@ -160,7 +191,10 @@ def main():
     partite = []
     giornata_sky = sky.giornata_corrente() if prossime else None
     n_uff, cercate = {"ESPN": 0, "Sky": 0, "SosFanta": 0}, 0
+    gia_viste = set()
     for ev in prossime:
+        ultima_ev, ctx["squalificati"] = calcoli.formazioni_per_partita(ev, ultima_formazione, squalificati, gia_viste)
+        gia_viste |= {ev["casa"], ev["trasf"]}
         forma = espn.formazioni(ev["id"], ev["stato"])
         e_uff = espn.ufficiale(forma)
         n_uff["ESPN"] += bool(e_uff)
@@ -168,8 +202,8 @@ def main():
             # ESPN è in ritardo: Sky e SosFanta pubblicano le ufficiali circa un'ora prima del fischio d'inizio
             cercate += 1
             dati_sky = sky.carica_pagina(ev, anno, giornata_sky)   # pagina "formazioni": nomi completi, anche dei soprannomi
-            for fonte, cerca in (("Sky", lambda: sky.ufficiali(ev, anno, ultima_formazione, giornata_sky, dati_sky)),
-                                 ("SosFanta", lambda: sosfanta.ufficiali(ev, ultima_formazione, sky.alias(dati_sky)))):
+            for fonte, cerca in (("Sky", lambda: sky.ufficiali(ev, anno, ultima_ev, giornata_sky, dati_sky)),
+                                 ("SosFanta", lambda: sosfanta.ufficiali(ev, ultima_ev, sky.alias(dati_sky)))):
                 forma_ext = cerca()
                 if forma_ext:
                     forma, e_uff = forma_ext, True
@@ -179,15 +213,17 @@ def main():
         if not e_uff:  # formazione non ancora uscita: mostro l'ultima schierata, segnalata come "probabile"
             forma = {}
             for lato, sq in (("home", ev["casa"]), ("away", ev["trasf"])):
-                if sq in ultima_formazione:
-                    forma[lato] = {"squadra": sq, "formazione": None, "giocatori": ultima_formazione[sq]}
+                if sq in ultima_ev:
+                    forma[lato] = {"squadra": sq, "formazione": None, "giocatori": ultima_ev[sq]}
         partite.append(calcoli.analizza_partita(ev, forma, e_uff, ctx))
 
     fonti = riepilogo_fonti(
         anno=anno, ultimo_fd=ultimo_fd, oggi=oggi, aggiunte=aggiunte, finite=finite, prossime=prossime,
         mancanti=mancanti, kickest_corrente=bool(len(kick[kick["stagione"] == anno])), n_tm=len(tm),
         quote_giocatori=quote_giocatori, nota_quote=nota_quote, quote_ora=quote_ora,
-        n_uff=n_uff, cercate=cercate, partite=partite)
+        n_uff=n_uff, cercate=cercate, partite=partite, copie_calendario=espn.copie_usate, problemi_formazioni=sky.problemi,
+        gialli_diversi=diversi, senza_arbitro_espn=arbitri_espn.senza_arbitro(anno),
+        senza_arbitro=int(df[df["stagione"] == anno]["arbitro"].isna().sum()), errore_pubblica=errore_pubblica)
     squadre_stagione = sorted(set(df[df["stagione"] == anno]["casa"]) | set(df[df["stagione"] == anno]["trasf"]))
     sezioni = {
         "arbitri": calcoli.tabella_arbitri(df, anno),

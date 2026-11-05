@@ -99,12 +99,13 @@ def raccogli(primaria=None):
                     ev["quote"] = (float(r.iloc[0]["pH"]), float(r.iloc[0]["pD"]), float(r.iloc[0]["pA"]))
             analisi = calcoli.analizza_partita(ev, forma, True, ctx)
             reali = {g["id"]: g for lato in forma.values() for g in lato["giocatori"]}
+            eventi = (dettagli.get(ev["id"]) or {}).get("eventi", [])
             for sq in analisi["squadre"]:
                 for gruppo, titolare in ((sq["titolari"], True), (sq["panchina"], False)):
                     for p in gruppo:
                         righe.append({"data": D.isoformat(), "partita": ev["casa"] + "-" + ev["trasf"], "squadra": sq["nome"],
                                       "nome": p["nome"], "ruolo": p["ruolo"], "titolare": titolare,
-                                      "p": float(p["p_giallo"]), "y": int(reali.get(p["id"], {}).get("gialli", 0) > 0),
+                                      "p": float(p["p_giallo"]), "y": int(calcoli.ammonito(reali.get(p["id"], {"id": p["id"]}), eventi)),
                                       "quota": p.get("quota_book")})
     return pd.DataFrame(righe)
 
@@ -149,24 +150,26 @@ def stampa_mercato(R):
     if not len(Q):
         print("\n(nessuna quota DAZN Bet salvata per le partite giocate: confronto con il mercato non disponibile)")
         return
-    y, p, q = Q["y"].values.astype(float), Q["p"].values, Q["quota"].values
-    imp = 1 / q
-    c = min(np.linspace(0.2, 1.0, 161), key=lambda c: _logloss(np.clip(imp * c, 1e-4, .99), y))
-    mercato = np.clip(imp * c, 1e-4, .99)
+    y, q = Q["y"].values.astype(float), Q["quota"].values
     print("\n--- confronto con il mercato: {} giocatori quotati, {} partite, {} ammoniti ---".format(
         len(Q), Q["partita"].nunique(), int(y.sum())))
     print("probabilità implicita media delle quote (1/q) {:.1f}% contro {:.1f}% di ammoniti reali "
-          "(puntando su tutti: ritorno {:+.0f}%)".format(imp.mean() * 100, y.mean() * 100, ((y * q) - 1).mean() * 100))
-    print("{:<38s} Brier {:.4f}   log-loss {:.4f}".format("MODELLO", _brier(p, y), _logloss(p, y)))
-    print("{:<38s} Brier {:.4f}   log-loss {:.4f}   (margine tolto con un solo coefficiente, favorevole al mercato)".format(
-        "MERCATO (1/q ripulito)", _brier(mercato, y), _logloss(mercato, y)))
-    Q["ev"] = Q["p"] * Q["quota"] - 1
-    print("\npuntate con valore atteso > 0 secondo il modello:")
-    for soglia in (0, .1, .25):
-        s = Q[Q["ev"] > soglia]
-        print("  EV > {:+.0f}%: {:3d} puntate, {:2d} vinte, ritorno reale {}".format(
-            soglia * 100, len(s), int(s["y"].sum()),
-            "{:+.0f}%".format(((s["y"] * s["quota"]) - 1).mean() * 100) if len(s) else "-"))
+          "(puntando su tutti: ritorno {:+.0f}%)".format((1 / q).mean() * 100, y.mean() * 100, ((y * q) - 1).mean() * 100))
+    # sui panchinari il modello parte avvantaggiato (sa chi è in panchina, il mercato no): il confronto vero è sui titolari
+    for nome, S in (("tutti", Q), ("solo titolari", Q[Q["titolare"]])):
+        ys, ps, imp = S["y"].values.astype(float), S["p"].values, 1 / S["quota"].values
+        c = min(np.linspace(0.2, 1.0, 161), key=lambda c: _logloss(np.clip(imp * c, 1e-4, .99), ys))
+        m = np.clip(imp * c, 1e-4, .99)
+        print("{:<14s} n={:4d}  modello Brier {:.4f} log-loss {:.4f} | mercato ripulito Brier {:.4f} log-loss {:.4f}".format(
+            nome, len(S), _brier(ps, ys), _logloss(ps, ys), _brier(m, ys), _logloss(m, ys)))
+    T = Q[Q["titolare"]]
+    print("\npuntate sui titolari con valore atteso > 0 (la pagina mostra il verde solo con p x {}):".format(config.PRUDENZA_EV))
+    for nome, ev in (("p", T["p"] * T["quota"] - 1), ("p x {}".format(config.PRUDENZA_EV), T["p"] * config.PRUDENZA_EV * T["quota"] - 1)):
+        for soglia in (0, .1):
+            s = T[ev > soglia]
+            print("  {:<8s} EV > {:+.0f}%: {:3d} puntate, {:2d} vinte, ritorno reale {}".format(
+                nome, soglia * 100, len(s), int(s["y"].sum()),
+                "{:+.0f}%".format(((s["y"] * s["quota"]) - 1).mean() * 100) if len(s) else "-"))
     print("(poche puntate: non dicono se il valore atteso funziona; ripeti quando le partite con quote saranno di più)")
 
 

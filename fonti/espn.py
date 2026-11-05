@@ -9,10 +9,11 @@ from dateutil import tz
 
 import modello
 from config import CACHE
-from utils import fresca, leggi_json, scarica_json, scrivi_json, squadra
+from utils import fresca, leggi_json_o, scarica_json, scrivi_json, squadra
 
 BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer/ita.1"
 ROMA = tz.gettz("Europe/Rome")
+copie_usate = []   # giorni di questo giro il cui calendario viene dalla copia salvata: la pagina lo deve dire
 
 
 def _ora_locale(iso):
@@ -43,9 +44,8 @@ def partite_del_giorno(giorno):
     giorno: meglio un calendario di qualche ora fa che fermare l'aggiornamento di tutta la pagina. Senza copia si ferma.
     """
     percorso = CACHE / "espn" / "calendario_{}.json".format(giorno.strftime("%Y%m%d"))
-    js = vecchio = None
-    if percorso.exists():
-        js = vecchio = leggi_json(percorso)
+    js = vecchio = leggi_json_o(percorso)
+    if js is not None:
         tutte_finite = all(e["status"]["type"]["state"] == "post" for e in js.get("events", []))
         if not ((tutte_finite and js.get("events")) or fresca(percorso, 0.1)):
             js = None
@@ -56,6 +56,7 @@ def partite_del_giorno(giorno):
             if vecchio is None:
                 raise
             print("  ! ESPN calendario del {:%d/%m}: {} - uso la copia salvata".format(giorno, e))
+            copie_usate.append(giorno)
             js = vecchio
         else:
             scrivi_json(percorso, js)
@@ -120,8 +121,8 @@ def formazioni(id_partita, stato):
     preso prima del fischio o durante il gioco (gialli e cambi incompleti) si riscarica.
     """
     percorso = CACHE / "espn" / "partita_{}.json".format(id_partita)
-    vecchio = leggi_json(percorso) if percorso.exists() else None
-    valido = fresca(percorso, None if stato == "post" else 0.08)
+    vecchio = leggi_json_o(percorso)
+    valido = vecchio is not None and fresca(percorso, None if stato == "post" else 0.08)
     if valido and stato == "post" and not finita(vecchio):
         valido = False
     if valido:

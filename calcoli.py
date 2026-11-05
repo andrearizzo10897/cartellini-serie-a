@@ -7,7 +7,8 @@ from statistics import median
 import pandas as pd
 
 import modello
-from config import FONTE_PRIMARIA, FORMA_BREVE, FORMA_LUNGA, MINUTI_PRIOR, PESO_STAGIONE
+from config import (FONTE_PRIMARIA, FORMA_BREVE, FORMA_LUNGA, MINUTI_PRIOR, PESO_STAGIONE, QUOTE_MAX_ORE, QUOTE_PRIMA_DEL_FISCHIO_MIN,
+                    SOGLIE_SQUALIFICA, adesso)
 from fonti import daznbet
 from presenza import SOGLIA_STORICO
 from utils import e_derby, nome_squadra, senza_accenti
@@ -94,9 +95,9 @@ def integra_con_espn(fd, finite, anno):
 
 
 def controllo_espn(fd, finite, anno):
-    """Confronta i gialli sommati da ESPN con quelli di football-data sulle partite presenti in entrambi."""
+    """(uguali, [partite diverse]): confronta i gialli sommati da ESPN con quelli di football-data sulle partite presenti in entrambi."""
     ref = {(r.casa, r.trasf): (r.g_c, r.g_t) for r in fd[fd["stagione"] == anno].itertuples()}
-    ok = diversi = 0
+    ok, diversi = 0, []
     for ev, forma in finite:
         if (ev["casa"], ev["trasf"]) in ref and "home" in forma and "away" in forma:
             e = (int(sum(g["gialli"] for g in forma["home"]["giocatori"])),
@@ -104,7 +105,7 @@ def controllo_espn(fd, finite, anno):
             if e == ref[(ev["casa"], ev["trasf"])]:
                 ok += 1
             else:
-                diversi += 1
+                diversi.append("{}-{}".format(ev["casa"], ev["trasf"]))
     return ok, diversi
 
 
@@ -263,14 +264,6 @@ def tabella_tipi(df):
     return righe
 
 
-def fattore_tipo(df, tipo):
-    g = df[df["tipo"] == tipo]
-    if not len(g):
-        return 1.0
-    n = len(g)
-    return 1.0 + (g["g_tot"].mean() / df["g_tot"].mean() - 1.0) * n / (n + 30.0)
-
-
 # ---------------------------------------------------------------------------------------------
 # Gialli attesi in una partita
 # ---------------------------------------------------------------------------------------------
@@ -328,6 +321,69 @@ def aggrega_espn(partite_finite):
     return giocatori, ultima
 
 
+def squalificati(partite_finite):
+    """{squadra: [(id, nome, motivo)]}: chi salta la prossima partita della squadra per quanto è successo nell'ultima.
+
+    Rosso (almeno una giornata; una squalifica più lunga non si può sapere) o il giallo che fa scattare lo stop. ESPN non conta
+    il giallo di un doppio giallo, e nemmeno il regolamento lo somma alla diffida."""
+    totale, ultima = {}, {}
+    for ev, forma in sorted(partite_finite, key=lambda x: x[0]["inizio"]):
+        for lato in ("home", "away"):
+            f = forma.get(lato)
+            if not f or not any(g["titolare"] for g in f["giocatori"]):
+                continue
+            ultima[f["squadra"]] = f["giocatori"]
+            for g in f["giocatori"]:
+                totale[g["id"]] = totale.get(g["id"], 0) + int(g["gialli"] or 0)
+    out = {}
+    for sq, giocatori in ultima.items():
+        for g in giocatori:
+            if g.get("rossi"):
+                motivo = "espulso"
+            elif g["gialli"] and totale[g["id"]] in SOGLIE_SQUALIFICA:
+                motivo = "{}° giallo".format(totale[g["id"]])
+            else:
+                continue
+            out.setdefault(sq, []).append((g["id"], g["nome"], motivo))
+    return out
+
+
+def formazioni_per_partita(ev, ultima, squalificati, gia_viste):
+    """(ultima formazione, squalificati) per questa partita: la squalifica vale solo per la prossima partita di ogni squadra.
+
+    gia_viste: squadre che hanno già una partita prima di questa nell'elenco (nella finestra di 8 giorni possono essere due)."""
+    ultima_ev, squal_ev = dict(ultima), {}
+    for sq in (ev["casa"], ev["trasf"]):
+        if sq in gia_viste or sq not in squalificati:
+            continue
+        fuori = {id_ for id_, _, _ in squalificati[sq]}
+        squal_ev[sq] = squalificati[sq]
+        if sq in ultima_ev:
+            ultima_ev[sq] = [g for g in ultima_ev[sq] if g["id"] not in fuori]
+    return ultima_ev, squal_ev
+
+
+def motivo_senza_ev(inizio, e_ufficiale, quote_ora, ora=None):
+    """Perché il valore atteso non si può mostrare, o None se si può.
+
+    Con la formazione probabile è falso: solo il 75% dei titolari dell'ultima partita riparte titolare, e il modello non è mai stato
+    provato così. Con quote vecchie non è il prezzo che si trova davvero, né tiene conto delle formazioni uscite nel frattempo."""
+    ora = ora or adesso()
+    if ora >= inizio:
+        return "iniziata"
+    if not e_ufficiale:
+        return "attesa ufficiali"
+    if quote_ora is None or (ora - quote_ora).total_seconds() > QUOTE_MAX_ORE * 3600 \
+            or (inizio - quote_ora).total_seconds() > QUOTE_PRIMA_DEL_FISCHIO_MIN * 60:
+        return "quota vecchia"
+    return None
+
+
+def ammonito(g, eventi):
+    """True se il giocatore ha preso un giallo: ESPN azzera il conteggio col doppio giallo, ma resta l'evento del primo."""
+    return bool(g.get("gialli")) or any(e["tipo"] == "yellow-card" and e["persone"][:1] == [g["id"]] for e in eventi or [])
+
+
 class _Collegamento:
     """Collega un giocatore di ESPN a una riga di storico (Kickest o Transfermarkt) dal nome e dalla squadra."""
 
@@ -375,6 +431,8 @@ class ProfiliGiocatori:
         self.anno = anno
         self.espn = espn_agg
         self.pm = presenza
+        # la stagione in corso viene da ESPN: quando Kickest la pubblicherà non va contata due volte (né usata nei backtest)
+        kick = kick[kick["stagione"] < anno]
         kick = kick.assign(entrate=(kick["presenze"] - kick["titolare"]).clip(lower=0))
         self.prior = {}
         for ruolo, g in kick.groupby("ruolo"):
@@ -532,9 +590,9 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
     arbitro = ctx["aia_risolte"].get((anno, casa, trasf))
     f_arb, info_arb = fattore_arbitro(df, arbitro)
     tipo = tipo_partita(casa, trasf, anno, ctx["tabelle"], anno)
-    f_tipo = fattore_tipo(df, tipo)
     e_c, e_t = gialli_attesi(ctx, ev)
-    fattore = f_arb * f_tipo
+    fattore = f_arb   # il tipo di partita resta solo informativo: rifatto partita per partita, non migliora la stima (NOTE_PER_CLAUDE.md)
+    no_ev = motivo_senza_ev(ev["inizio"], e_ufficiale, ctx.get("quote_ora"), ctx.get("adesso"))
     totale = (e_c + e_t) * fattore
     soglie = []
     for s in SOGLIE:
@@ -551,6 +609,7 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
         titolari, panchina = [], []
         for g in (f["giocatori"] if f else []):
             pg = ctx["profili"].profilo(g["id"], g["nome"], sq, g["ruolo_espn"])
+            pg["fischio"] = ev["inizio"]
             (titolari if g["titolare"] else panchina).append(pg)
         riconcilia_squadra(titolari, panchina, sq, atteso_sq, ctx["presenza"])
         daznbet.associa(ctx.get("quote_giocatori", {}).get((casa, trasf)), sq, titolari + panchina)
@@ -561,10 +620,11 @@ def analizza_partita(ev, forma, e_ufficiale, ctx):
         con_quote = (casa, trasf) in ctx.get("quote_giocatori", {})
         squadre.append({"nome": nome_squadra(sq), "lato": lato, "formazione": f["formazione"] if f else None,
                         "atteso": atteso_sq, "titolari": titolari, "panchina": panchina,
-                        "quote_ora": ctx.get("quote_ora") if con_quote else None,
+                        "quote_ora": ctx.get("quote_ora") if con_quote else None, "no_ev": no_ev,
+                        "squalificati": [] if e_ufficiale else ctx.get("squalificati", {}).get(sq, []),
                         "id_stemma": ev.get("id_casa" if lato == "home" else "id_trasf")})
     return {"ev": ev, "ufficiale": e_ufficiale, "arbitro": arbitro, "arbitro_aia": arbitro_aia,
-            "info_arbitro": info_arb, "f_arb": f_arb, "tipo": tipo, "f_tipo": f_tipo,
+            "info_arbitro": info_arb, "f_arb": f_arb, "tipo": tipo,
             "atteso": totale, "atteso_base": e_c + e_t, "soglie": soglie, "squadre": squadre}
 
 

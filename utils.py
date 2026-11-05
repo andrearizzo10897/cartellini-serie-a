@@ -1,5 +1,6 @@
 """Funzioni comuni: download con cache e normalizzazione dei nomi."""
 import json
+import os
 import re
 import time
 import unicodedata
@@ -55,9 +56,32 @@ def leggi_json(percorso):
     return json.loads(percorso.read_text(encoding="utf-8"))
 
 
-def scrivi_json(percorso, oggetto):
+def leggi_json_o(percorso, altrimenti=None):
+    """Come leggi_json, ma un file mancante o rovinato non ferma l'aggiornamento: restituisce `altrimenti`."""
+    try:
+        return leggi_json(percorso)
+    except (OSError, ValueError):
+        return altrimenti
+
+
+def scrivi_testo(percorso, testo):
+    """Scrive su un file temporaneo e poi lo sostituisce: chi legge vede il file vecchio o quello nuovo, mai uno a metà."""
     percorso.parent.mkdir(parents=True, exist_ok=True)
-    percorso.write_text(json.dumps(oggetto, ensure_ascii=False), encoding="utf-8")
+    temporaneo = percorso.with_name("{}.{}.tmp".format(percorso.name, os.getpid()))
+    temporaneo.write_text(testo, encoding="utf-8")
+    for i in range(5):
+        try:
+            os.replace(temporaneo, percorso)
+            return
+        except PermissionError:   # su Windows OneDrive o un altro programma può tenere il file aperto per un attimo
+            if i == 4:
+                temporaneo.unlink(missing_ok=True)
+                raise
+            time.sleep(0.5 * (i + 1))
+
+
+def scrivi_json(percorso, oggetto):
+    scrivi_testo(percorso, json.dumps(oggetto, ensure_ascii=False))
 
 
 def senza_accenti(s):

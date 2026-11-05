@@ -79,15 +79,15 @@ def carica():
         quote = scarica_quote()
         if quote:
             return quote, None, config.adesso()
-    except (requests.RequestException, ValueError):
-        pass
+    except Exception as e:  # noqa: BLE001 - rete o formato cambiato: la pagina deve generarsi comunque
+        print("  ! DAZN Bet: {}".format(e))
     quote, quando = da_file()
     if not quote:
         return {}, "DAZN Bet non ha risposto e non c'è un file di quote salvato: le quote dei giocatori non sono disponibili.", None
     ore = (config.adesso() - quando).total_seconds() / 3600
     nota = "Quote DAZN Bet scaricate dal PC il {:%d/%m alle %H:%M}.".format(quando)
-    if ore > 6:
-        nota += " Sono vecchie di {:.0f} ore: controllale sul sito prima di giocare.".format(ore)
+    if ore > config.QUOTE_MAX_ORE:
+        nota += " Sono vecchie di {:.0f} ore: il valore atteso non è mostrato, controllale sul sito.".format(ore)
     return quote, nota, quando
 
 
@@ -100,12 +100,20 @@ def associa(quote_partita, sq, giocatori):
     righe = [r for r in (quote_partita or []) if r[1] == sq]
     for g in giocatori:
         g["quota_book"] = None
-        t = set(_token(g["nome"]))
-        if not t or not righe:
-            continue
-        piene = [r for r in righe if t <= set(r[0])]
-        if len(piene) != 1:
-            cognome = _token(g["nome"])[-1]
-            piene = [r for r in righe if cognome in r[0]]
-        if len(piene) == 1:
-            g["quota_book"] = piene[0][2]
+    liberi = list(range(len(righe)))
+
+    def assegna(va_bene):
+        """Ogni riga di DAZN Bet va a un giocatore solo: se due giocatori si contendono la stessa riga, nessuno dei due."""
+        scelte = {}
+        for g in giocatori:
+            if g["quota_book"] is None and _token(g["nome"]):
+                adatte = [i for i in liberi if va_bene(g, righe[i])]
+                if len(adatte) == 1:
+                    scelte.setdefault(adatte[0], []).append(g)
+        for i, chi in scelte.items():
+            if len(chi) == 1:
+                chi[0]["quota_book"] = righe[i][2]
+                liberi.remove(i)
+
+    assegna(lambda g, r: set(_token(g["nome"])) <= set(r[0]))
+    assegna(lambda g, r: _token(g["nome"])[-1] in r[0])

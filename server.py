@@ -5,6 +5,7 @@ Uso:  python3 server.py            (solo da questo computer)
       python3 server.py --rete     (anche da altri dispositivi della stessa rete wifi, es. il telefono)
 Il pulsante "Aggiorna" della pagina lancia aggiorna.py e ricarica la pagina.
 """
+import errno
 import json
 import os
 import socket
@@ -71,6 +72,11 @@ class Gestore(BaseHTTPRequestHandler):
         pass
 
 
+class ServerUnico(ThreadingHTTPServer):
+    """Su Windows SO_REUSEADDR lascerebbe aprire due Avvia sulla stessa porta: scriverebbero insieme gli stessi file."""
+    allow_reuse_address = os.name != "nt"
+
+
 def _ip_locale():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -104,13 +110,20 @@ def _quote_in_background(falliti):
 
 def main():
     rete = "--rete" in sys.argv
+    try:
+        server = ServerUnico(("0.0.0.0" if rete else "127.0.0.1", PORTA), Gestore)   # prima di aggiornare: due Avvia non devono lavorare insieme
+    except OSError as e:
+        if e.errno not in (errno.EADDRINUSE, errno.EACCES, 10013):   # 10013: come Windows rifiuta una porta già presa
+            raise
+        print("Avvia è già aperto in un'altra finestra: apro la pagina e non faccio partire un secondo aggiornamento.")
+        webbrowser.open("http://localhost:{}".format(PORTA))
+        return
     # a ogni avvio aggiorno subito: così le quote e il loro orario sono quelli di adesso
     print("Aggiorno i dati prima di partire (può servire un minuto)...")
     ok, msg = _aggiorna()
     if not ok:
         print("Attenzione, aggiornamento non riuscito (riprovo fra {} minuti):\n{}".format(attesa_dopo(1) // 60, msg))
     threading.Thread(target=_quote_in_background, args=(0 if ok else 1,), daemon=True).start()
-    server = ThreadingHTTPServer(("0.0.0.0" if rete else "127.0.0.1", PORTA), Gestore)
     print("Pagina pronta su http://localhost:{}".format(PORTA))
     if rete:
         print("Dal telefono (stesso wifi): http://{}:{}".format(_ip_locale(), PORTA))

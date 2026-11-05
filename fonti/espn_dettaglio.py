@@ -9,7 +9,7 @@ L'archivio dati/cache/espn_dettaglio.json tiene solo i campi necessari: dopo la 
 from config import CACHE
 from fonti import espn
 from fonti.api_football import _breve
-from utils import leggi_json, scarica_json, scrivi_json, squadra
+from utils import leggi_json, leggi_json_o, scarica_json, scrivi_json, squadra
 
 ARCHIVIO = CACHE / "espn_dettaglio.json"
 VERSIONE = 1
@@ -46,7 +46,7 @@ def compatta(js):
 
 def _da_cache_completa(id_partita):
     percorso = CACHE / "espn" / "partita_{}.json".format(id_partita)
-    return leggi_json(percorso) if percorso.exists() else None
+    return leggi_json_o(percorso)
 
 
 _archivio = None
@@ -55,6 +55,7 @@ _archivio = None
 def _archivio_corrente():
     global _archivio
     if _archivio is None:
+        # se il file è bloccato o rovinato ci si ferma (il server riprova): con un archivio vuoto si salverebbe sopra a quello vero
         _archivio = leggi_json(ARCHIVIO) if ARCHIVIO.exists() else {}
         if _archivio.get("_versione") != VERSIONE:
             _archivio = {"_versione": VERSIONE}

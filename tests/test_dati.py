@@ -227,7 +227,7 @@ class RiepilogoFonti(unittest.TestCase):
                     finite=[(None, None)] * 78, prossime=[{"quote": (0.4, 0.3, 0.3)}, {"quote": None}],
                     mancanti=[], kickest_corrente=False, n_tm=2459, quote_giocatori={("a", "b"): []}, nota_quote=None,
                     quote_ora=datetime(2026, 10, 25, 18, 49), n_uff={"ESPN": 1, "Sky": 0, "SosFanta": 0}, cercate=1,
-                    partite=[{"arbitro": "X"}, {"arbitro": None}])
+                    partite=[{"arbitro": "X"}, {"arbitro": None}], ora=datetime(2026, 10, 25, 19, 0))
         base.update(kw)
         return {nome: (livello, testo) for nome, livello, testo in aggiorna.riepilogo_fonti(**base)}
 
@@ -248,7 +248,7 @@ class RiepilogoFonti(unittest.TestCase):
 
     def test_dazn_non_risponde(self):
         self.assertEqual(self.fonti(quote_giocatori={}, nota_quote=None)["DAZN Bet"][0], "no")
-        self.assertEqual(self.fonti(nota_quote="Quote scaricate dal PC alle 10:00.")["DAZN Bet"][0], "att")
+        self.assertEqual(self.fonti(nota_quote="Quote scaricate dal PC alle 10:00.", quote_ora=datetime(2026, 10, 25, 10, 0))["DAZN Bet"][0], "att")
 
     def test_kickest_e_transfermarkt(self):
         f = self.fonti(mancanti=[2025], n_tm=0)

@@ -9,7 +9,7 @@ import pandas as pd
 from config import CACHE
 from fonti import espn, espn_dettaglio
 from fonti.api_football import STAGIONI_GRATIS
-from utils import leggi_json, scrivi_json
+from utils import leggi_json, leggi_json_o, scrivi_json
 
 ARCHIVIO = CACHE / "arbitri_espn.json"
 
@@ -35,6 +35,7 @@ def carica(fd, finite, anno_corrente, noti=()):
     fd: partite di football-data (le date delle giornate); finite: partite finite della stagione in corso
     già lette da ESPN come (evento, formazioni).
     """
+    # se il file è bloccato o rovinato ci si ferma (il server riprova): con un archivio vuoto si salverebbe sopra a quello vero
     archivio = leggi_json(ARCHIVIO) if ARCHIVIO.exists() else {}
     nuovi = 0
     eventi = []   # (stagione, evento)
@@ -71,5 +72,10 @@ def carica(fd, finite, anno_corrente, noti=()):
 
 def id_partite(da_stagione):
     """Id ESPN delle partite finite già note dall'archivio, dalla stagione indicata in poi."""
-    archivio = leggi_json(ARCHIVIO) if ARCHIVIO.exists() else {}
+    archivio = leggi_json_o(ARCHIVIO, {})
     return [k for k, v in archivio.items() if v[0] >= da_stagione]
+
+
+def senza_arbitro(stagione):
+    """Quante partite della stagione ESPN ha dato senza arbitro (da ottobre 2026 non lo indica più)."""
+    return sum(1 for v in leggi_json_o(ARCHIVIO, {}).values() if v[0] == stagione and not v[3])

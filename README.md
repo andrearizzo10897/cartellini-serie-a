@@ -29,6 +29,7 @@ di ogni giocatore della Serie A, giornata per giornata (un pallino per giornata,
   DAZN Bet: quota «giocatore ammonito» di ogni giocatore, con valore atteso accanto a P(giallo); se il sito non risponde la colonna resta «–»;
   Sky Sport e SosFanta: formazioni ufficiali, di solito prima di ESPN)
 - La scheda «Come funziona» della pagina mostra quale fonte ha risposto a ogni aggiornamento; in alto «Dati di N min fa» avvisa quando la pagina è vecchia.
+- `requirements.txt` – versioni fisse delle librerie usate dal workflow di GitHub
 - `dati/` – dati salvati (cache + `designazioni.json`, lo storico degli arbitri che cresce da solo)
 - `.env` – chiave API-Football (non condividerla fuori dalla cerchia di fiducia)
 

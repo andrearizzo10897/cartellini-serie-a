@@ -81,6 +81,7 @@ def _interpreta(pagina):
 
 def aggiorna():
     """Scarica le designazioni di Serie A presenti sul sito e le aggiunge all'archivio."""
+    # se il file è bloccato o rovinato ci si ferma (il server riprova): con un archivio vuoto si salverebbe sopra a quello vero
     archivio = leggi_json(ARCHIVIO) if ARCHIVIO.exists() else {}
     try:
         elenco = _pagina(BASE + "/designazioni/can/")

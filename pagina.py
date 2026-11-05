@@ -4,9 +4,9 @@ from html import escape
 
 from dateutil import tz
 
-from config import adesso
+from config import PRUDENZA_EV, adesso
 from fonti import stemmi
-from utils import nome_squadra
+from utils import nome_squadra, scrivi_testo
 
 ROMA = tz.gettz("Europe/Rome")
 GIORNI = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
@@ -172,6 +172,7 @@ ul.fonti{list-style:none;padding:0;margin:6px 0 0}
 .fonte{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line)}.fonte:first-child{border-top:0}
 .fonte i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--verde);transform:translateY(-1px)}
 .fonte.att i{background:var(--medio)}.fonte.no i{background:var(--rosa)}
+.q.ev.scaduto{display:none!important}
 .gg-filtri{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .gg-filtri select,.gg-filtri input{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0;flex:1 1 170px}
 .gg-filtri select{flex:0 1 240px}
@@ -264,7 +265,8 @@ var eta=$('#eta'),rl=$('#ricarica');
 if(eta){var gen=Date.parse(eta.getAttribute('data-gen'));
  var tx=function(m){if(m<1)return 'adesso';if(m<60)return m+' min fa';var h=Math.floor(m/60),r=m%60;if(h<48)return h+' h'+(r?' '+r+' min':'')+' fa';return Math.floor(h/24)+' giorni fa'};
  var ag_eta=function(){if(isNaN(gen)){eta.textContent='';return}var m=Math.max(0,Math.round((Date.now()-gen)/60000));
-  eta.textContent='Dati di '+tx(m);eta.className='eta'+(m>180?' molto':(m>45?' vecchio':''));if(rl)rl.hidden=m<=45};
+  eta.textContent='Dati di '+tx(m);eta.className='eta'+(m>180?' molto':(m>45?' vecchio':''));if(rl)rl.hidden=m<=45;
+  $$('.q.ev').forEach(function(e){var f=Date.parse(e.getAttribute('data-fischio'));e.classList.toggle('scaduto',m>45||(!isNaN(f)&&Date.now()>=f))})};
  ag_eta();setInterval(ag_eta,60000);document.addEventListener('visibilitychange',ag_eta);window.addEventListener('focus',ag_eta);
  if(rl)rl.addEventListener('click',function(){if(location.protocol==='file:'){location.reload()}else{location.href=location.pathname+'?r='+Date.now()}})}
 var dt=$('#det');if(dt){dt.addEventListener('change',function(){document.body.classList.toggle('det-on',dt.checked)})}
@@ -363,14 +365,23 @@ def quando(dt):
 
 
 # ---- Partite ---------------------------------------------------------------------------------
-def cella_book(p):
-    """Quota DAZN Bet per "ammonito" e valore atteso (probabilità stimata x quota - 1)."""
+def cella_book(p, no_ev=None):
+    """Quota DAZN Bet per "ammonito" e valore atteso (probabilità stimata x quota - 1), solo quando ha senso calcolarlo.
+
+    no_ev: perché non si può (vedi calcoli.motivo_senza_ev). Il verde richiede che resti positivo con il 20% di probabilità in meno:
+    le stime più alte sono anche quelle più spesso gonfiate dal caso."""
     q = p.get("quota_book")
     if not q:
         return td("", "–")
+    if no_ev:
+        return td(q, '<b>{}</b><span class="q" title="Valore atteso non calcolato: servono le formazioni ufficiali e quote appena scaricate">{}</span>'.format(
+            n(q, 2), escape(no_ev)))
     ev = p["p_giallo"] * q - 1
-    return td(q, '<b>{}</b><span class="q{}" title="Valore atteso di una puntata: probabilità stimata x quota - 1">{}{}%</span>'.format(
-        n(q, 2), " p-alta" if ev > 0 else "", "+" if ev > 0 else "", n(ev * 100, 0)))
+    verde = p["p_giallo"] * PRUDENZA_EV * q > 1
+    # il JavaScript lo nasconde a partita iniziata o se la pagina è vecchia: il controllo in Python vale solo quando la pagina nasce
+    fischio = ' data-fischio="{}"'.format(p["fischio"].replace(tzinfo=ROMA).isoformat(timespec="minutes")) if p.get("fischio") else ""
+    return td(q, '<b>{}</b><span class="q ev{}"{} title="Valore atteso di una puntata: probabilità stimata x quota - 1. In verde solo se resta positivo con il 20% di probabilità in meno">{}{}%</span>'.format(
+        n(q, 2), " p-alta" if verde else "", fischio, "+" if ev > 0 else "", n(ev * 100, 0)))
 
 
 _PARTICELLE = {"de", "di", "da", "del", "della", "dal", "van", "von", "la", "le", "el", "al", "ben", "dos", "das", "do", "mac", "mc"}
@@ -399,7 +410,7 @@ def riga_cambio(p, panchina):
         etichetta, " · ".join("{} <b>{}</b>".format(escape(cognome(n)), pct(x)) for n, x in elenco))
 
 
-def righe_giocatori(lista, panchina):
+def righe_giocatori(lista, panchina, no_ev=None):
     out = []
     for p in sorted(lista, key=lambda x: -x["p_giallo"]) if panchina else lista:
         alto = ' class="alto"' if p["p_giallo"] >= 0.2 else ""
@@ -418,7 +429,7 @@ def righe_giocatori(lista, panchina):
         celle.append('<td data-v="{}"{}>{}</td>'.format(p["p_giallo"], alto,
                                                          barra(p["p_giallo"], 0.5, con_quota(p["p_giallo"], 1),
                                                                livello(p["p_giallo"], 0.08, 0.15))))
-        celle.append(cella_book(p))
+        celle.append(cella_book(p, no_ev))
         out.append("<tr>" + "".join(celle) + "</tr>")
     return "".join(out)
 
@@ -449,7 +460,7 @@ def tabella_squadra(sq):
                   lato="CASA" if sq["lato"] == "home" else "OSPITE", stemma=stemma_html(sq.get("id_stemma")))
     ora = ('<span class="sep-ora" title="Quando sono state scaricate le quote DAZN Bet">quote DAZN Bet aggiornate {}</span>'.format(
         ora_quote(sq["quote_ora"])) if sq.get("quote_ora") else "")
-    t += "<tr class=\"sep\"><td colspan=\"8\">Titolari{}</td></tr>".format(ora) + righe_giocatori(sq["titolari"], False)
+    t += "<tr class=\"sep\"><td colspan=\"8\">Titolari{}</td></tr>".format(ora) + righe_giocatori(sq["titolari"], False, sq.get("no_ev"))
     t += "</tbody></table></div>"
     if sq["panchina"]:
         t += ('<details class="panchina"><summary>Panchina · {} giocatori (probabilità di entrare e di essere ammoniti)</summary>'
@@ -459,8 +470,11 @@ def tabella_squadra(sq):
               '<th class="nm" title="Probabilità di giallo se entra (circa 25 minuti)">Se entra</th>'
               '<th title="P(entra) x P(giallo se entra)">P(giallo)</th>'
               '<th title="Quota DAZN Bet per «giocatore ammonito» e valore atteso rispetto alla probabilità stimata">DAZN Bet</th></tr></thead><tbody>')
-        t += righe_giocatori(sq["panchina"], True) + "</tbody></table></div></details>"
+        t += righe_giocatori(sq["panchina"], True, sq.get("no_ev")) + "</tbody></table></div></details>"
         t = t.replace("<summary>Panchina · {} giocatori", "<summary>Panchina · {} giocatori".format(len(sq["panchina"])), 1)
+    if sq.get("squalificati"):
+        t += '<p class="legenda">Fuori dalla formazione probabile perché squalificati: {}.</p>'.format(
+            ", ".join("{} ({})".format(escape(nome), escape(motivo)) for _, nome, motivo in sq["squalificati"]))
     return t + "</div>"
 
 
@@ -514,20 +528,19 @@ def scheda_partita(i, p):
         sc=stemma_html(ev.get("id_casa")), st=stemma_html(ev.get("id_trasf")))
     corpo = (
         '<div class="kpis">{arb}'
-        '<div class="kpi"><span>Gialli attesi (totale)</span><b>{att}</b><span>{casa}: {ac} · {trasf}: {at}<br>senza arbitro e tipo: {base}</span></div>'
-        '<div class="kpi"><span>Tipo di partita</span><b>{tipo}</b><span>effetto sul totale: {ft}</span></div></div>'
+        '<div class="kpi"><span>Gialli attesi (totale)</span><b>{att}</b><span>{casa}: {ac} · {trasf}: {at}<br>senza arbitro: {base}</span></div>'
+        '<div class="kpi"><span>Tipo di partita</span><b>{tipo}</b><span>solo informativo: non cambia la stima</span></div></div>'
         '<div class="scroll"><table class="soglie"><thead><tr><th>Gialli totali</th><th>Stimata</th>'
         '<th>Serie A</th><th>Tipo</th><th>Arbitro</th></tr></thead><tbody>{soglie}</tbody></table></div>'
         '{rischio}'
         '<details><summary class="small">Come leggere le percentuali e le quote</summary><p class="legenda">La probabilità stimata combina le squadre, '
-        'le quote dei bookmaker, l\'arbitro e il tipo di partita. Sotto ogni percentuale c\'è la <b>quota minima conveniente</b> (1 diviso la '
+        'le quote dei bookmaker e l\'arbitro. Sotto ogni percentuale c\'è la <b>quota minima conveniente</b> (1 diviso la '
         'probabilità): conviene giocare solo se il bookmaker paga di più. Nelle tabelle dei giocatori la colonna <b>DAZN Bet</b> mostra la quota '
-        'reale per «giocatore ammonito» e, sotto, il valore atteso (probabilità stimata x quota - 1): in verde-arancio se positivo. I colori vanno dal grigio-blu (probabilità bassa) all\'arancio (alta). '
+        'reale per «giocatore ammonito» e, sotto, il valore atteso (probabilità stimata x quota - 1): compare solo con le formazioni ufficiali e le quote appena scaricate, altrimenti c\'è scritto il motivo, ed è in verde solo se resta positivo con il 20% di probabilità in meno. I colori vanno dal grigio-blu (probabilità bassa) all\'arancio (alta). '
         'Le colonne \u00abSerie A\u00bb, \u00abTipo\u00bb e \u00abArbitro\u00bb sono frequenze reali nello storico (ultime 380 partite, quelle dello stesso tipo, quelle dello stesso arbitro), utili per confronto.</p></details>'
         '<div class="cols" style="margin-top:12px">{t1}{t2}</div>'
     ).format(arb=arb, att=n(p["atteso"]), casa=casa, trasf=trasf, ac=n(p["squadre"][0]["atteso"]), at=n(p["squadre"][1]["atteso"]),
              base=n(p["atteso_base"]), tipo=escape(p["tipo"]),
-             ft="{:+.0f}%".format((p["f_tipo"] - 1) * 100).replace("+0%", "nessuno").replace("-0%", "nessuno"),
              soglie=soglie, rischio=rischio, t1=tabella_squadra(p["squadre"][0]), t2=tabella_squadra(p["squadre"][1]))
     return ('<section class="match-panel{}" data-match="{}" data-match-gruppo="match"><div class="mp-testa">{}</div>'
             '<div class="corpo">{}</div></section>').format("" if i == 0 else " hid", i, testa, corpo)
@@ -656,7 +669,7 @@ più gialli) e i falli che le due squadre commettono e subiscono. Le partite vec
 poche partite sono avvicinate alla media.</li>
 <li><b>Arbitro.</b> Si confronta la media di gialli dell'arbitro con quella della Serie A. Con poche partite l'effetto viene ridotto: con n
 partite pesa n/(n+15). Se l'arbitro non è ancora designato, il fattore è neutro.</li>
-<li><b>Tipo di partita</b> (derby, big match, scontro salvezza): stessa logica, ridotta con n/(n+30).</li>
+<li><b>Tipo di partita</b> (derby, big match, scontro salvezza): è solo informativo e non cambia la stima, perché rifatto partita per partita non la migliora.</li>
 <li>Il totale atteso è la somma delle due squadre (ad esempio 1,8 + 2,1 = 3,9 gialli).</li></ul></div>
 
 <div class="card"><h3>2. Come si dividono tra i giocatori</h3><ul>
@@ -693,7 +706,7 @@ tipo, partite dello stesso arbitro.</li></ul></div>
 <li><b>football-data.co.uk</b>: gialli, rossi, falli e quote 1X2 di ogni partita, dal 2023/24 (si aggiorna con qualche giorno di ritardo: le partite più recenti le ricavo da ESPN).</li>
 <li><b>Transfermarkt</b>: fonte principale dello storico dei giocatori. Presenze, convocazioni, entrate, uscite, minuti e gialli dal 2022/23 al 2025/26: copre il 96-97% dei gialli di ogni stagione. Le stagioni finite sono salvate nel repository, perché da GitHub il sito non risponde.</li>
 <li><b>Kickest</b>: di riserva per i giocatori che Transfermarkt non ha, e unica fonte di falli e contrasti. Minuti, presenze, gialli, falli e contrasti nel 2023/24, 2024/25 e 2025/26 (copre il 93-94% dei gialli; il 2026/27 non è ancora pubblicato).</li>
-<li><b>ESPN</b>: calendario, formazioni ufficiali e panchina, minuto di cambi e ammonizioni (2025/26 e 2026/27), arbitri dal 2025/26 e quote 1X2 delle partite ancora da giocare (se mancano, la partita è trattata come media). Per la stagione in corso è la fonte dei giocatori: ottobre 2026, confrontata con Transfermarkt, i gialli coincidono per 490 giocatori su 498.</li>
+<li><b>ESPN</b>: calendario, formazioni ufficiali e panchina, minuto di cambi e ammonizioni (2025/26 e 2026/27), arbitri dal 2025/26 all'autunno 2026 (poi ESPN non li indica più e valgono le designazioni AIA) e quote 1X2 delle partite ancora da giocare (se mancano, la partita è trattata come media). Per la stagione in corso è la fonte dei giocatori: ottobre 2026, confrontata con Transfermarkt, i gialli coincidono per 490 giocatori su 498.</li>
 <li><b>Sky Sport e SosFanta</b>: formazioni ufficiali, di solito prima di ESPN (circa un'ora prima della partita).</li>
 <li><b>API-Football (piano gratuito)</b>: arbitro di ogni partita del 2023/24 e 2024/25.</li>
 <li><b>AIA</b>: designazioni arbitrali della giornata. Il sito mostra solo l'ultima: le salvo a ogni aggiornamento.</li></ul></div>
@@ -701,22 +714,24 @@ tipo, partite dello stesso arbitro.</li></ul></div>
 <div class="card"><h3>Quanto è affidabile</h3><ul>
 <li><b>Gialli di squadra.</b> Ho rifatto ogni previsione di 2024/25, 2025/26 e 2026/27 usando solo i dati precedenti a quella partita
 (<code>backtest.py</code>). Sull'errore delle soglie over (Brier, più basso è meglio): 0,193 con il metodo di partenza, 0,182 con
-questo modello e 0,173 aggiungendo l'arbitro (partite 2025/26 e 2026/27, mai usate per tarare). La sovrastima sistematica dei gialli
+questo modello e 0,173 aggiungendo l'arbitro (partite 2025/26 e 2026/27). Non è una prova su dati mai visti, perché alcune scelte del modello sono state fatte guardando anche queste partite, e sul solo 2026/27 il guadagno dell'arbitro non è statisticamente significativo. La sovrastima sistematica dei gialli
 (+0,27 a partita) è sparita.</li>
-<li><b>Giocatori.</b> Al 25/10/2026, sulle 78 partite 2026/27 giocate e rifatte usando solo i dati precedenti a ciascuna, gli
-ammoniti previsti sono 239 contro 255 reali (titolari 11,2% previsto e 11,8% reale, panchinari 2,3% e 2,6%) e anche fascia per fascia di
-probabilità le percentuali tornano. Lo storico del singolo giocatore migliora solo di poco una semplice media per ruolo (errore 0,0599
-contro 0,0605): conta di più il contesto della partita. La probabilità di entrare è molto più precisa (errore 0,545 contro 0,586).
+<li><b>Giocatori.</b> Al 5/11/2026, sulle 100 partite 2026/27 giocate e rifatte usando solo i dati precedenti a ciascuna, gli
+ammoniti previsti sono 305 contro 319 reali (titolari 11,2% previsto e 11,6% reale, panchinari 2,3% e 2,4%) e anche fascia per fascia di
+probabilità le percentuali tornano abbastanza. Lo storico del singolo giocatore migliora solo di poco una semplice media per ruolo (errore 0,0583
+contro 0,0593): conta di più il contesto della partita. La probabilità di entrare è molto più precisa (errore 0,545 contro 0,586).
 Il campione è piccolo: sono indicazioni, non prove definitive.</li>
-<li><b>Quote DAZN Bet e valore atteso.</b> Sulle 17 partite di cui ho salvato le quote, le quote «ammonito» implicano in media circa il 20%
-di probabilità contro un 8-11% di ammoniti reali: il margine del bookmaker è altissimo e puntare su tutti i giocatori farebbe perdere
-tra il 46% e il 58% della posta. Il valore atteso positivo è raro (8 casi su 644) e troppo pochi per sapere se funziona: va letto come
-un segnale da controllare, soprattutto per chi è segnato «poco storico».</li>
+<li><b>Quote DAZN Bet e valore atteso.</b> Sulle 33 partite di cui ho salvato le quote, le quote «ammonito» implicano in media circa il 21%
+di probabilità contro un 8% di ammoniti reali: il margine del bookmaker è altissimo e puntare su tutti i giocatori avrebbe perso il 62% della posta.
+Sui soli titolari il modello e il mercato sono praticamente pari (errore 0,388 contro 0,390): il vantaggio che si vede su tutti i giocatori viene dal
+sapere chi è in panchina. Le puntate sui titolari con valore atteso positivo sono state 12, con 2 vinte e un ritorno del -25%: <b>nessuna prova che il
+valore atteso funzioni</b>. Per questo compare solo con le formazioni ufficiali e le quote appena scaricate, ed è verde solo se resta positivo con il
+20% di probabilità in meno. Non ho potuto verificare se DAZN Bet rimborsa la puntata su chi non entra: per i panchinari conta.</li>
 <li><b>Provato e scartato</b> perché non migliorava i risultati: l'effetto dell'allenatore (né quello della squadra né quello di chi è appena
-arrivato), distribuzioni più complesse di Poisson e lo storico arbitri di Transfermarkt prima del 2023.</li></ul></div>
+arrivato), il tipo di partita, distribuzioni più complesse di Poisson e lo storico arbitri di Transfermarkt prima del 2023.</li></ul></div>
 
 <div class="card"><h3>Limiti da tenere presenti</h3><ul>
-<li>Il modello non conosce squalifiche, diffide, infortuni, tattiche, meteo o importanza della gara. Prima delle formazioni ufficiali (circa un'ora prima) si usa l'ultima formazione schierata: le percentuali dei giocatori sono provvisorie.</li>
+<li>Il modello non conosce infortuni, tattiche, meteo o importanza della gara. Prima delle formazioni ufficiali (circa un'ora prima) si usa l'ultima formazione schierata, senza chi ha preso un rosso o il giallo che fa scattare la squalifica: le percentuali dei giocatori sono provvisorie e il valore atteso non viene mostrato. Le squalifiche di più giornate non sono note.</li>
 <li>Chi entra dalla panchina dipende da come va la partita: P(entra) è una media, non una previsione.</li>
 <li>I minuti della stagione in corso per i singoli giocatori sono stimati (titolare = 90, o 68 se sostituito; subentrato = 25, o 15).</li>
 <li>Dati usati: {partite_tot} partite storiche, {arb} con arbitro noto.</li></ul></div>""".format(
@@ -797,6 +812,9 @@ def genera(partite, sezioni, percorso):
     def e_quote(s):
         return s.startswith(("Quote DAZN", "DAZN Bet"))
     note = "".join('<div class="note">{}</div>'.format(escape(s)) for s in sezioni["stato"] if e_quote(s))
+    # un dato che manca dove serve si deve vedere subito, non solo in «Come funziona»
+    note = "".join('<div class="note"><b>{}</b>: {}</div>'.format(escape(nome), escape(testo))
+                   for nome, liv, testo in sezioni.get("fonti") or [] if liv == "no") + note
     # con il riquadro "Fonti di questo aggiornamento" le note sulle fonti sarebbero ripetute: restano solo senza
     stato_dati = ('<div class="card"><h3>Stato dei dati</h3>{}</div>'.format(
         "".join('<div class="note">{}</div>'.format(escape(s)) for s in sezioni["stato"] if not e_quote(s)))
@@ -833,4 +851,4 @@ def genera(partite, sezioni, percorso):
         media=n(lega["gialli"]), over35=pct(lega["over"][3.5]), over45=pct(lega["over"][4.5]), over55=pct(lega["over"][5.5]),
         agg=sezioni["aggiornato"].strftime("%d/%m/%Y alle %H:%M"), fin=sezioni["partite_giocate"], note=note, nav=nav, sez=sez,
         gen=sezioni["aggiornato"].replace(tzinfo=ROMA).isoformat(timespec="seconds"))
-    percorso.write_text(html, encoding="utf-8")
+    scrivi_testo(percorso, html)

@@ -37,6 +37,9 @@ def _slug(nome):
     return re.sub(r"[^a-z0-9]+", "-", senza_accenti(nome).lower()).strip("-")
 
 
+problemi = set()   # errori veri di questo giro (non «non ancora pubblicato»): rete, blocchi, formato cambiato
+
+
 def giornata_corrente():
     """Numero di giornata che Sky mostra nella pagina delle probabili formazioni (None se non si legge)."""
     try:
@@ -54,7 +57,9 @@ def _scarica(ev, anno, giornate, pagina):
             for t in ALIAS.get(ev["trasf"], [_slug(ev["trasf"])]):
                 try:
                     r = scarica(BASE.format(anno=anno, g=g, slug=c + "-" + t, pagina=pagina), headers=UA, pausa=0.1, tentativi=1)
-                except Exception:  # noqa: BLE001 - 404 o rete: provo la combinazione dopo
+                except Exception as e:  # noqa: BLE001 - 404 (pagina che non c'è) o rete: provo la combinazione dopo
+                    if getattr(getattr(e, "response", None), "status_code", None) != 404:
+                        problemi.add("Sky non risponde")
                     continue
                 return r.text, g
     return None, None
@@ -103,6 +108,8 @@ def carica_pagina(ev, anno, giornata=None):
     dati = leggi_formazioni(raw)
     if dati:
         dati["giornata"] = g
+    elif raw:
+        problemi.add("pagina formazioni di Sky illeggibile (formato cambiato?)")
     return dati
 
 
@@ -112,8 +119,10 @@ def alias(dati):
     for sezione in ("titolari", "riserve"):
         for lato in out:
             for _, completo, scritto in (dati or {}).get(sezione, {}).get(lato, []):
-                if _chiave(scritto):
-                    out[lato][_chiave(scritto)] = completo
+                k = _chiave(scritto)
+                if k:
+                    # "Diallo D." e "Diallo O." hanno la stessa chiave: in quel caso il nome non si può tradurre
+                    out[lato][k] = None if out[lato].get(k, completo) != completo else completo
     return out
 
 
@@ -151,7 +160,9 @@ def _trova(nome_sky, rosa, usati, portiere=False):
             sbagliato = (g.get("ruolo_espn") == "G") != portiere if g.get("ruolo_espn") else False
             migliori.append(((sbagliato, -sum(len(x) for x in t if x in pieces)), g))
     if migliori:
-        return min(migliori, key=lambda m: m[0])[1]
+        chiave = min(m[0] for m in migliori)
+        primi = [g for k, g in migliori if k == chiave]
+        return primi[0] if len(primi) == 1 else None    # due Diallo o due Terracciano nello stesso ruolo: non si indovina
     # soprannomi ("Kike Perez" per Enrique Pérez): se l'ultima parola è il cognome di un solo giocatore, è lui
     sol = [g for g in rosa if g["id"] not in usati and t[-1] in _tok(g["nome"])[1:]]
     return sol[0] if len(sol) == 1 else None
@@ -272,6 +283,9 @@ def da_nomi(ev, ultima_formazione, estratte, tradotti=None):
         usati, titolari = set(), []
         for k, n in enumerate(nomi):
             completo = (tradotti or {}).get(lato, {}).get(_chiave(n))
+            parole = _tok(_chiave(n))
+            if completo and sum(1 for x in tutti if all(p in _tok(x["nome"]) for p in parole)) > 1:
+                completo = None   # cognome di due giocatori della rosa: decide _trova (iniziale o ruolo), o nessuno
             g = (completo and _trova_completo(completo, tutti, usati, portiere=(k == 0))) or _trova(n, tutti, usati, portiere=(k == 0))
             if not g:
                 return None   # soprannome sconosciuto: meglio le altre fonti che una formazione sbagliata

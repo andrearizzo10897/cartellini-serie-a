@@ -64,7 +64,7 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
 - **Test dei giocatori** (`backtest_giocatori.py`, 78 partite 2026/27, solo dati precedenti): ammoniti previsti 239 contro 255 reali, calibrazione buona per fascia;
   una ricalibrazione logistica NON migliora (leave-one-day-out). Brier 0,0599 contro 0,0605 della media per ruolo: lo storico del singolo aggiunge poco.
   Con le quote (17 partite, 55 ammoniti): modello log-loss 0,266 contro 0,288 del mercato ripulito; campione troppo piccolo per concludere.
-- **Quote DAZN Bet «ammonito»**: margine enorme (1/q medio ~20% contro 8-11% reale): puntando su tutti si perde il 46-58%. Valore atteso > 0 rarissimo (8 su 644).
+- **Quote DAZN Bet «ammonito»**: margine enorme (5/11/2026, 33 partite: 1/q medio 21% contro 8,3% reale, puntando su tutti -62%). Vedi la sezione del 5/11: sui soli titolari il modello non batte il mercato.
 - **Workflow su GitHub**: i cron `*/10` e `*/20` rendono lo stesso, ~2 avvii all'ora (25-31 al giorno), mediana 32 minuti. Non è un problema di orario:
   GitHub scarta gli avvii programmati. L'unico modo per avere di più è lanciarlo da fuori (workflow_dispatch con un token) – non fatto.
   Un giro dura circa 1-2 minuti. Nella pagina online non c'è alcun token (il pulsante Aggiorna è solo nascosto, `.az{display:none}`).
@@ -113,3 +113,19 @@ endpoint interno getStats; il 2026/27 non c'è ancora), API-Football free (arbit
 - La pagina AIA della 10ª giornata (ID 28806) per le cinque partite di domenica 1/11 scriveva solo l'ora («h. 12.30»), senza «Domenica 01/11»: `aia._interpreta`
   voleva il giorno nella riga dopo le squadre e le saltava (archivio con 5 partite su 10, «da designare» nella pagina). Ora accetta anche la sola ora e prende la data
   della partita prima (il giorno dopo se l'ora è più presto). Test con la pagina vera in `tests/fixtures/aia_designazioni_10a_giornata.html`.
+
+## 05/11/2026: revisione critica (agente critic) e correzioni
+- **Valore atteso**: `calcoli.motivo_senza_ev` lo nasconde se la formazione è probabile, se le quote hanno più di `QUOTE_MAX_ORE` (2) o sono scaricate più di `QUOTE_PRIMA_DEL_FISCHIO_MIN` (90) prima
+  del fischio, o a partita iniziata. Verde solo se positivo anche con `PRUDENZA_EV` (p x 0,8). Motivo: solo il 74,7% dei titolari dell'ultima partita riparte titolare (dato del critico).
+- **Confronto col mercato** (`backtest_giocatori.py`, 33 partite con quote, 1207 giocatori): tutti log-loss 0,2545 contro 0,2812, ma **solo titolari 0,3878 contro 0,3902**: il vantaggio veniva dal sapere chi è in
+  panchina, il mercato quota uguale chi non gioca. EV > 0 sui titolari: 12 puntate, 2 vinte, -25%; con p x 0,8: 1 puntata, 0 vinte. Nessuna prova che l'EV funzioni. Calibrazione 100 partite: 305 previsti contro 319 reali, Brier 0,0583 contro 0,0593.
+- **Squalifiche** (`calcoli.squalificati`, tolti solo dalla formazione probabile): soglie verificate sul 2025/26: assenti la partita dopo il 97% al 5° giallo (97 casi) e il 100% al 10° (5 casi), 0-6% agli altri. 14° e 17° in `config.SOGLIE_SQUALIFICA`
+  sono a memoria, MAI osservati: da verificare col regolamento. Squalifiche di più giornate e gialli portati dalla stagione prima non sono noti.
+- **Tipo di partita**: il fattore è tolto (solo informativo). Rifatto walk-forward dal critico su 480 partite: Brier -0,0005, IC [-0,0020;+0,0010]. Non rifatto da me.
+- **Riquadro fonti**: «ok» solo se il dato serve così com'è. Arbitro mancante entro 24 ore (non 48: l'AIA pubblica anche il giorno prima), calendario da copia salvata o nessuna quota = «no» e avviso in cima a Partite. Ufficiali mancanti a 45 minuti, errori Sky/SosFanta (`sky.problemi`, distinti da «non pubblicato»), gialli ESPN/football-data diversi, push rifiutato = «att».
+- **ESPN non dà più l'arbitro** (50 partite su 100 del 2026/27, ricontrollato scaricando di nuovo: `officials` assente): lo storico dipende dall'AIA, quindi `dati/designazioni.json` ora parte con le quote (`pubblica_quote`). Se GitHub perde la cache riparte da quel file.
+- **File**: `utils.scrivi_testo`/`scrivi_json` atomici, `leggi_json_o` per le letture che non devono fermare il giro. **Server**: `ServerUnico` senza SO_REUSEADDR su Windows e bind prima dell'aggiornamento: un secondo Avvia apre la pagina e si ferma.
+- **Sky**: due omonimi nello stesso ruolo = None. **DAZN**: ogni riga a un solo giocatore; `carica` non si ferma se cambia il formato. **Kickest**: `ProfiliGiocatori` ignora la stagione in corso. **Workflow**: `requirements.txt` fisso (versioni risolte per Python 3.11), niente token iniettato e niente `--short`; il cron non è stato toccato.
+- **Aperto**: regole DAZN su chi non entra (per i panchinari cambia la formula: oggi è prudente, P(entra) x P(giallo se entra)); non trovate in rete, da leggere sul sito.
+- **Dopo la revisione del codice**: gli archivi che non si ricostruiscono (`designazioni.json`, `arbitri_espn.json`, `espn_dettaglio.json`) NON usano `leggi_json_o`: bloccati o rovinati fermano il giro, altrimenti un archivio vuoto si salverebbe sopra a quello vero e partirebbe online. La squalifica vale solo per la prossima partita della squadra (`calcoli.formazioni_per_partita`, nella finestra di 8 giorni possono essere due). Il valore atteso scade anche nella pagina aperta: il JS lo nasconde a partita iniziata o con dati oltre 45 minuti. L'alias Sky non decide fra omonimi.
+- **`--short` tolto da staticrypt**: la password attuale è lunga, quindi va bene; con una password sotto i 14 caratteri staticrypt chiede conferma, non scrive `site/` e il giro fallisce (pagina vecchia online).
