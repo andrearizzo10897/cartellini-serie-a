@@ -10,12 +10,15 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: write     # per far ripartire il workflow da solo prima delle partite (job «prossimo»)
 concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      richiama: ${{ steps.dati.outputs.richiama }}
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -32,7 +35,8 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Chiave API-Football
         run: echo "APIFOOTBALL_KEY=${{ secrets.APIFOOTBALL_KEY }}" > .env
-      - run: python aggiorna.py
+      - id: dati
+        run: python aggiorna.py
       - name: Controlla la password della pagina
         id: pw
         env:
@@ -66,3 +70,14 @@ jobs:
       - id: deploy
         if: steps.pw.outputs.ok == 'si'
         uses: actions/deploy-pages@v4
+  # Il cron di GitHub salta molti avvii: nelle 2 ore prima di una partita senza ufficiali il workflow fa ripartire se stesso,
+  # senza PC e senza token esterni. Si ferma quando le trova o quando la partita inizia.
+  prossimo:
+    needs: build
+    if: needs.build.outputs.richiama == 'si'
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 420
+      - run: gh workflow run aggiorna.yml --ref main -R "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}

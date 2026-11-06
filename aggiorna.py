@@ -98,6 +98,12 @@ def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti,
     return fonti
 
 
+def serve_richiamare(partite, ora=None):
+    """True se una partita inizia entro 2 ore e non ha ancora le ufficiali: il workflow di GitHub deve ripartire presto."""
+    ora = ora or config.adesso()
+    return any(not p["ufficiale"] and timedelta(0) < p["ev"]["inizio"] - ora <= timedelta(hours=2) for p in partite)
+
+
 def main():
     oggi = config.adesso().date()
     anno = config.STAGIONE_CORRENTE
@@ -255,6 +261,9 @@ def main():
         "partite_giocate": len(finite),
     }
     pagina.genera(partite, sezioni, config.OUTPUT)
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as uscita:
+            uscita.write("richiama={}\n".format("si" if serve_richiamare(partite) else "no"))
     print("Fatto: {}  ({} partite in programma)".format(config.OUTPUT, len(partite)))
     return 0
 

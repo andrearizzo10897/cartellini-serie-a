@@ -438,6 +438,23 @@ class LetturaArticoli(unittest.TestCase):
         sky.problemi.clear()
 
 
+class CatenaGitHub(unittest.TestCase):
+    ORA = datetime(2026, 11, 7, 13, 30)
+
+    def serve(self, ore, ufficiale=False):
+        return aggiorna.serve_richiamare([{"ufficiale": ufficiale, "ev": {"inizio": self.ORA + timedelta(hours=ore)}}], self.ORA)
+
+    def test_entro_due_ore_senza_ufficiali_riparte(self):
+        self.assertTrue(self.serve(1.5))
+
+    def test_con_le_ufficiali_si_ferma(self):
+        self.assertFalse(self.serve(1.5, ufficiale=True))
+
+    def test_troppo_presto_o_gia_iniziata_si_ferma(self):
+        self.assertFalse(self.serve(3))
+        self.assertFalse(self.serve(-0.2))
+
+
 class TerzaFonteOnline(unittest.TestCase):
     def test_di_marzio_con_il_suo_articolo(self):
         url = "/news-calcio/venezia-udinese-formazioni-ufficiali-11a-giornata-serie-a-news-499228"
