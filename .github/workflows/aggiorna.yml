@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: "*/10 8-22 * * *"   # richiesto ogni 10 minuti: GitHub ritarda gli avvii programmati, quindi in pratica ogni ~20; dalle 10 alle 24 ora italiana (orario UTC)
   workflow_dispatch: {}          # pulsante "Run workflow" per aggiornare subito a mano
+  push:                          # ogni invio di quote dal PC (ogni 20 minuti con Avvia acceso) aggiorna subito la pagina online
+    paths: [quote_daznbet.json, formazioni_ufficiali.json]
 permissions:
   contents: read
   pages: write

@@ -89,9 +89,9 @@ def _ip_locale():
 
 
 def attesa_dopo(falliti):
-    """Secondi fino al prossimo aggiornamento: 30 minuti, ma dopo un aggiornamento non riuscito si riprova presto
-    (3 minuti, poi 10), altrimenti la pagina resta ferma per mezz'ora per un sito che ha risposto male una volta."""
-    return {0: 1800, 1: 180, 2: 600}.get(falliti, 1800)
+    """Secondi fino al prossimo aggiornamento: 20 minuti (ogni invio di quote fa partire anche il giro su GitHub), ma dopo un
+    aggiornamento non riuscito si riprova presto (3 minuti, poi 10), per non restare fermi per un sito che ha risposto male una volta."""
+    return {0: 1200, 1: 180, 2: 600}.get(falliti, 1200)
 
 
 def _quote_in_background(falliti):

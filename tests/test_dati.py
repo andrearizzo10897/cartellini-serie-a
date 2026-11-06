@@ -271,4 +271,4 @@ class RiprovaSulPC(unittest.TestCase):
 
     def test_attese(self):
         import server
-        self.assertEqual([server.attesa_dopo(n) for n in range(5)], [1800, 180, 600, 1800, 1800])
+        self.assertEqual([server.attesa_dopo(n) for n in range(5)], [1200, 180, 600, 1200, 1200])
