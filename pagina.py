@@ -173,6 +173,7 @@ ul.fonti{list-style:none;padding:0;margin:6px 0 0}
 .fonte i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--verde);transform:translateY(-1px)}
 .fonte.att i{background:var(--medio)}.fonte.no i{background:var(--rosa)}
 .q.ev.scaduto{display:none!important}
+.note.no-uff{border-left-color:var(--rosso);color:var(--ink)}
 .gg-filtri{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .gg-filtri select,.gg-filtri input{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0;flex:1 1 170px}
 .gg-filtri select{flex:0 1 240px}
@@ -266,6 +267,7 @@ if(eta){var gen=Date.parse(eta.getAttribute('data-gen'));
  var tx=function(m){if(m<1)return 'adesso';if(m<60)return m+' min fa';var h=Math.floor(m/60),r=m%60;if(h<48)return h+' h'+(r?' '+r+' min':'')+' fa';return Math.floor(h/24)+' giorni fa'};
  var ag_eta=function(){if(isNaN(gen)){eta.textContent='';return}var m=Math.max(0,Math.round((Date.now()-gen)/60000));
   eta.textContent='Dati di '+tx(m);eta.className='eta'+(m>180?' molto':(m>45?' vecchio':''));if(rl)rl.hidden=m<=45;
+  $$('.no-uff').forEach(function(e){var f=Date.parse(e.getAttribute('data-fischio')),o=Date.now();e.classList.toggle('hid',!(o>=f-2400000&&o<f))});
   $$('.q.ev').forEach(function(e){var f=Date.parse(e.getAttribute('data-fischio'));e.classList.toggle('scaduto',m>45||(!isNaN(f)&&Date.now()>=f))})};
  ag_eta();setInterval(ag_eta,60000);document.addEventListener('visibilitychange',ag_eta);window.addEventListener('focus',ag_eta);
  if(rl)rl.addEventListener('click',function(){if(location.protocol==='file:'){location.reload()}else{location.href=location.pathname+'?r='+Date.now()}})}
@@ -562,6 +564,16 @@ def tessera(i, p):
         stemma_html(ev.get("id_trasf")), escape(nome_squadra(ev["trasf"])))
 
 
+def avvisi_ufficiali(partite):
+    """Avvisi nascosti, uno per partita senza ufficiali: il JavaScript li mostra da 40 minuti prima del fischio."""
+    return "".join(
+        '<div class="note hid no-uff" data-fischio="{}"><b>Ufficiali non trovate per {} – {}</b>: su questa pagina la formazione è ancora '
+        'quella probabile. Controlla a mano prima di giocare.</div>'.format(
+            p["ev"]["inizio"].replace(tzinfo=ROMA).isoformat(timespec="minutes"),
+            escape(nome_squadra(p["ev"]["casa"])), escape(nome_squadra(p["ev"]["trasf"])))
+        for p in partite if not p["ufficiale"])
+
+
 def riepilogo_giornata(partite):
     """Tre riquadri in cima: dove ci sono più gialli attesi, arbitri più severi, giocatori più a rischio."""
     if not partite:
@@ -707,7 +719,7 @@ tipo, partite dello stesso arbitro.</li></ul></div>
 <li><b>Transfermarkt</b>: fonte principale dello storico dei giocatori. Presenze, convocazioni, entrate, uscite, minuti e gialli dal 2022/23 al 2025/26: copre il 96-97% dei gialli di ogni stagione. Le stagioni finite sono salvate nel repository, perché da GitHub il sito non risponde.</li>
 <li><b>Kickest</b>: di riserva per i giocatori che Transfermarkt non ha, e unica fonte di falli e contrasti. Minuti, presenze, gialli, falli e contrasti nel 2023/24, 2024/25 e 2025/26 (copre il 93-94% dei gialli; il 2026/27 non è ancora pubblicato).</li>
 <li><b>ESPN</b>: calendario, formazioni ufficiali e panchina, minuto di cambi e ammonizioni (2025/26 e 2026/27), arbitri dal 2025/26 all'autunno 2026 (poi ESPN non li indica più e valgono le designazioni AIA) e quote 1X2 delle partite ancora da giocare (se mancano, la partita è trattata come media). Per la stagione in corso è la fonte dei giocatori: ottobre 2026, confrontata con Transfermarkt, i gialli coincidono per 490 giocatori su 498.</li>
-<li><b>Sky Sport e SosFanta</b>: formazioni ufficiali, di solito prima di ESPN (circa un'ora prima della partita).</li>
+<li><b>Sky Sport, SosFanta e Fantacalcio</b>: formazioni ufficiali, di solito prima di ESPN (circa un'ora prima della partita). Quelle trovate dal PC vengono pubblicate con le quote, così le vede anche la pagina online. Da 40 minuti prima del fischio, se non ce ne sono, compare un avviso rosso.</li>
 <li><b>API-Football (piano gratuito)</b>: arbitro di ogni partita del 2023/24 e 2024/25.</li>
 <li><b>AIA</b>: designazioni arbitrali della giornata. Il sito mostra solo l'ultima: le salvo a ogni aggiornamento.</li></ul></div>
 
@@ -824,7 +836,7 @@ def genera(partite, sezioni, percorso):
     nav = "".join('<button role="tab" data-tab="{k}" data-tab-gruppo="tab" aria-selected="{s}">{v}</button>'.format(
         k=k, v=v, s="true" if k == "partite" else "false") for k, v in tabs)
     corpo = {
-        "partite": (riepilogo_giornata(partite) + note +
+        "partite": (avvisi_ufficiali(partite) + riepilogo_giornata(partite) + note +
                     '<div class="titolo-sez"><h2>Partite</h2><span class="small">Scegli una partita dalla fila</span></div>' +
                     ('<div class="strip"><button type="button" class="freccia sx" aria-label="Indietro">‹</button>'
                      '<div class="tiles">{}</div><button type="button" class="freccia dx" aria-label="Avanti">›</button></div>'.format(

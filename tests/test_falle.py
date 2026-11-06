@@ -14,7 +14,7 @@ import calcoli
 import pagina
 import server
 import utils
-from fonti import aia, daznbet, espn, sky, sosfanta
+from fonti import aia, articoli, daznbet, espn, fantacalcio, sky, sosfanta
 
 FISCHIO = datetime(2026, 11, 7, 18, 0)
 
@@ -348,7 +348,7 @@ class SosFantaNuovoFormato(unittest.TestCase):
     ARTICOLO = "https://www.sosfanta.com/squadra/udinese/venezia-udinese-formazioni-ufficiali-fantacalcio/"
 
     def test_link_dagli_elenchi(self):
-        with mock.patch.object(sosfanta, "scarica", return_value=mock.Mock(text='<a href="%s">x</a>' % self.ARTICOLO)):
+        with mock.patch.object(articoli, "scarica", return_value=mock.Mock(text='<a href="%s">x</a>' % self.ARTICOLO)):
             self.assertEqual(sosfanta._link(self.EV), self.ARTICOLO)
 
     def test_qualunque_percorso_va_bene(self):
@@ -356,27 +356,27 @@ class SosFantaNuovoFormato(unittest.TestCase):
         for url in ("https://www.sosfanta.com/news/formazioni-ufficiali-venezia-udinese-zaniolo/",
                     "https://www.sosfanta.com/2027/nuova-sezione/venezia-e-udinese-le-formazioni-ufficiali/",
                     "https://www.sosfanta.com/x/venezia-udinese-ufficiali"):
-            with mock.patch.object(sosfanta, "scarica", return_value=mock.Mock(text=url + '"')):
+            with mock.patch.object(articoli, "scarica", return_value=mock.Mock(text=url + '"')):
                 self.assertEqual(sosfanta._link(self.EV), url, url)
 
     def test_si_trova_con_la_ricerca_del_sito(self):
         def finta(url, **_):
             return mock.Mock(text=self.ARTICOLO if "?s=formazioni+ufficiali+venezia+udinese" in url else "niente")
-        with mock.patch.object(sosfanta, "scarica", side_effect=finta):
+        with mock.patch.object(articoli, "scarica", side_effect=finta):
             self.assertEqual(sosfanta._link(self.EV), self.ARTICOLO)
 
     def test_altre_partite_e_probabili_non_vanno_bene(self):
         for url in ("https://www.sosfanta.com/squadra/udinese/venezia-roma-formazioni-ufficiali-fantacalcio/",
                     "https://www.sosfanta.com/squadra/udinese/udinese-venezia-formazioni-ufficiali-fantacalcio/",     # il ritorno
                     "https://www.sosfanta.com/news/venezia-udinese-probabili-formazioni-ufficiali/x-y/"):
-            with mock.patch.object(sosfanta, "scarica", return_value=mock.Mock(text=url)):
+            with mock.patch.object(articoli, "scarica", return_value=mock.Mock(text=url)):
                 self.assertIsNone(sosfanta._link(self.EV), url)
 
     def test_articolo_di_un_altro_giorno_si_scarta(self):
         inizio = datetime(2026, 11, 6, 20, 45)
-        self.assertTrue(sosfanta._del_giorno("", "marco astori 6 novembre - 19:35", inizio))
-        self.assertTrue(sosfanta._del_giorno('"datePublished":"2026-11-06T19:35"', "", inizio))
-        self.assertFalse(sosfanta._del_giorno('"datePublished":"2025-03-02"', "2 marzo", inizio))
+        self.assertTrue(articoli.del_giorno("", "marco astori 6 novembre - 19:35", inizio))
+        self.assertTrue(articoli.del_giorno('"datePublished":"2026-11-06T19:35"', "", inizio))
+        self.assertFalse(articoli.del_giorno('"datePublished":"2025-03-02"', "2 marzo", inizio))
 
     def test_refuso_di_una_lettera_solo_se_il_giocatore_e_uno(self):
         rosa = [{"id": "1", "nome": "James Abankwah", "ruolo_espn": "CD"}, {"id": "2", "nome": "Matteo Palma", "ruolo_espn": "CD"}]
@@ -385,6 +385,79 @@ class SosFantaNuovoFormato(unittest.TestCase):
         self.assertIsNone(sky._trova("Abakwah", doppio, set()))
         self.assertIsNone(sky._trova("Palmi", [{"id": "2", "nome": "Matteo Palma"}, {"id": "4", "nome": "Ugo Palmo"}], set()))
         self.assertIsNone(sky._trova("Ross", [{"id": "5", "nome": "Mario Rossi"}], set()))   # troppo corto per fidarsi
+
+
+class LetturaArticoli(unittest.TestCase):
+    """Testi veri del 6/11/2026: le formazioni si riconoscono dal contenuto, con qualunque titolo intorno."""
+    FANTA = ("Venezia-Udinese, le formazioni ufficiali VENEZIA (3-5-2) : Stankovic; Halhal, Moreno, Juan Jesus; Hainaut, Kike Pérez, Sohm, Basic, "
+             "Mazzocchi; Yeboah, Adams. Allenatore: Davide Nicola UDINESE (3-5-2) : Okoye; Abankwah, Palma, Solet; Vojvoda, Piotrowski, Karlström, "
+             "Kamara; Zaniolo, Ekkelenkamp; Davis. Allenatore: Paolo Zanetti")
+    SOS = ("LE FORMAZIONI UFFICIALI: VENEZIA - Stankovic; Halhal, Moreno, Juan Jesus; Hainaut, Perez, Sohm, Basic, Mazzocchi; Adams, Yeboah. "
+           "UDINESE - Okoye; Abakwah, Palma, Solet; Vojvoda, Piotrowski, Karlstrom, Kamara; Zaniolo, Ekkelenkamp; Davis. © RIPRODUZIONE RISERVATA")
+    DIMARZIO = ("Di seguito le scelte VENEZIA (3-5-2): Stankovic; Halhal, Moreno,Juan Jesus; Hainaut, Kike Perez, Basic, Sohm, Mazzocchi; Yeboah, Adams. "
+                "All . Nicola A disposizione: Montipò, Schingtienne, Haps, Busio, Rrhamani, Fanne, Correia, Bella Kotchap, Sagrado, Helgason, Lauberbach, Dagasso. "
+                "UDINESE (3-4-2-1): Okoye; Abankwah, Palma, Solet; Vojvoda, Piotrowski, Karlstrom, Kamara; Zaniolo, Ekkelenkamp; Davis.")
+
+    def test_tre_siti_tre_formati(self):
+        for testo in (self.FANTA, self.SOS, self.DIMARZIO):
+            trovati = articoli.blocchi(testo)
+            self.assertEqual([len(b) for b in trovati], [11, 11], testo[:30])
+            self.assertEqual(trovati[0][0], "Stankovic")
+            self.assertEqual(trovati[1][0], "Okoye")
+            self.assertEqual(trovati[1][-1], "Davis")
+
+    def test_un_titolo_nuovo_non_cambia_niente(self):
+        self.assertEqual(articoli.blocchi(self.SOS.replace("LE FORMAZIONI UFFICIALI:", "ECCO GLI UNDICI IN CAMPO:")), articoli.blocchi(self.SOS))
+
+    def test_solo_elenchi_non_sono_formazioni(self):
+        self.assertEqual(articoli.blocchi("A disposizione: Montipò, Schingtienne, Haps, Busio, Rrhamani, Fanne, Correia, Sagrado, Helgason, Lauberbach, Dagasso."), [])
+
+    def test_fantacalcio_trova_e_legge_l_articolo(self):
+        url = "/news/calcio-italia/06_11_2026/venezia-udinese-le-formazioni-ufficiali-500381"
+        rosa = [{"id": n, "nome": n, "ruolo_espn": "G" if n in ("Stankovic", "Okoye") else "CM"} for n in
+                ("Stankovic Halhal Moreno Juan_Jesus Hainaut Kike_Perez Sohm Basic Mazzocchi Yeboah Adams Okoye Abankwah Palma Solet Vojvoda "
+                 "Piotrowski Karlstrom Kamara Zaniolo Ekkelenkamp Davis").replace("_", " ").replace("Juan Jesus", "Juan_Jesus").replace("Kike Perez", "Kike_Perez").split()]
+        for g in rosa:
+            g["nome"] = g["nome"].replace("_", " ")
+        ev = {"casa": "venezia", "trasf": "udinese", "id_casa": "1", "id_trasf": "2", "inizio": datetime(2026, 11, 6, 20, 45)}
+
+        def finta(u, **_):
+            return mock.Mock(text=('<a href="%s">x</a>' % url) if "formazioni-ufficiali" not in u else self.FANTA + " 6 novembre")
+        with mock.patch.object(articoli, "scarica", side_effect=finta), mock.patch.object(sky, "_rosa", return_value=rosa):
+            forma = fantacalcio.ufficiali(ev, {}, None)
+        self.assertEqual(sum(g["titolare"] for g in forma["home"]["giocatori"]), 11)
+        self.assertEqual([g["nome"] for g in forma["away"]["giocatori"] if g["titolare"]][0], "Okoye")
+
+    def test_articolo_vecchio_o_senza_formazioni_non_vale(self):
+        ev = {"casa": "venezia", "trasf": "udinese", "inizio": datetime(2026, 11, 6, 20, 45)}
+        with mock.patch.object(articoli, "scarica", return_value=mock.Mock(text=self.FANTA + " 2 marzo 2025")):
+            self.assertIsNone(articoli.leggi(ev, {}, None, ["u"], "X"))
+        with mock.patch.object(articoli, "scarica", return_value=mock.Mock(text="niente 6 novembre")):
+            self.assertIsNone(articoli.leggi(ev, {}, None, ["u"], "X"))
+        self.assertIn("articolo di X senza le due formazioni (formato cambiato?)", sky.problemi)
+        sky.problemi.clear()
+
+
+class UfficialiDelPc(unittest.TestCase):
+    def test_si_salvano_e_si_tolgono_le_partite_finite(self):
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(articoli, "SALVATE", Path(t) / "f.json"):
+            self.assertTrue(articoli.salva({"1": {"home": {}}}, [{"id": "1"}, {"id": "2"}]))
+            self.assertFalse(articoli.salva({"1": {"home": {}}}, [{"id": "1"}]))        # uguale: niente da pubblicare
+            self.assertTrue(articoli.salva({"2": {"away": {}}}, [{"id": "2"}]))         # la 1 è finita
+            self.assertEqual(articoli.salvate(), {"2": {"away": {}}})
+
+    def test_file_mancante(self):
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(articoli, "SALVATE", Path(t) / "no.json"):
+            self.assertEqual(articoli.salvate(), {})
+
+
+class AvvisoUfficiali(unittest.TestCase):
+    def test_solo_per_le_partite_senza_ufficiali(self):
+        ev = {"casa": "roma", "trasf": "genoa", "inizio": FISCHIO}
+        html = pagina.avvisi_ufficiali([{"ev": ev, "ufficiale": False}, {"ev": dict(ev, casa="lazio"), "ufficiale": True}])
+        self.assertEqual(html.count("no-uff"), 1)
+        self.assertIn("Roma", html)
+        self.assertIn('data-fischio="2026-11-07T18:00+01:00"', html)
 
 
 class FileSicuri(unittest.TestCase):

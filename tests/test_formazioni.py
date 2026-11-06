@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from fonti import articoli
 from fonti import sky, sosfanta
 
 # ---- testi come arrivano dalle pagine (già ripuliti dai tag) ---------------------------------------
@@ -252,7 +253,7 @@ class SosFantaConNomiCompleti(unittest.TestCase):
         rose = rose_dalla_pagina(dati)
         with mock.patch.dict(sky.SOPRANNOMI, clear=True), \
                 mock.patch.object(sosfanta, "_articoli", return_value=["https://www.sosfanta.com/news/x/"]), \
-                mock.patch.object(sosfanta, "scarica", return_value=mock.Mock(text="<p>%s</p>" % self.ARTICOLO)), \
+                mock.patch.object(articoli, "scarica", return_value=mock.Mock(text="<p>%s</p>" % self.ARTICOLO)), \
                 mock.patch.object(sky, "_rosa", side_effect=lambda id_sq: rose[id_sq]):
             return sosfanta.ufficiali(EV_FC, {}, tradotti)
 
@@ -306,7 +307,7 @@ class LetturaSosFanta(unittest.TestCase):
         home = ('<a href="https://www.sosfanta.com/news/formazioni-ufficiali-roma-genoa-mora-soule/">x</a>'
                 '<a href="https://www.sosfanta.com/news/formazioni-ufficiali-venezia-napoli-de-bruyne-lucca/">y</a>'
                 '<a href="https://www.sosfanta.com/news/formazioni-ufficiali-hellas-verona-lecce-x-y/">z</a>')
-        with mock.patch.object(sosfanta, "scarica", return_value=mock.Mock(text=home)):
+        with mock.patch.object(articoli, "scarica", return_value=mock.Mock(text=home)):
             self.assertTrue(sosfanta._link(EV_VN).endswith("venezia-napoli-de-bruyne-lucca/"))
             self.assertIn("hellas-verona-lecce", sosfanta._link({"casa": "verona", "trasf": "lecce"}))
             self.assertIsNone(sosfanta._link({"casa": "roma", "trasf": "cagliari"}))
@@ -316,7 +317,7 @@ class SenzaRete(unittest.TestCase):
     def test_se_il_sito_non_risponde_restituisce_none(self):
         with mock.patch.object(sky, "scarica", side_effect=OSError("rete")):
             self.assertIsNone(sky.ufficiali(EV_VN, 2026, {}, 7))
-        with mock.patch.object(sosfanta, "scarica", side_effect=OSError("rete")):
+        with mock.patch.object(articoli, "scarica", side_effect=OSError("rete")):
             self.assertIsNone(sosfanta.ufficiali(EV_VN, {}))
 
 

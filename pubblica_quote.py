@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 import config
-from fonti import aia, daznbet, transfermarkt
+from fonti import aia, articoli, daznbet, transfermarkt
 
 
 def git(*args):
@@ -30,6 +30,8 @@ def pubblica(nuove):
     # e le designazioni AIA: ESPN non dà più l'arbitro e il sito AIA mostra solo le ultime giornate, se GitHub perde la cache servono queste
     if aia.ARCHIVIO.exists():
         file.append(aia.ARCHIVIO.relative_to(config.BASE).as_posix())
+    if articoli.SALVATE.exists():   # le ufficiali trovate dal PC: GitHub non raggiunge tutti i siti
+        file.append(articoli.SALVATE.name)
     git("add", *file)
     if not git("status", "--porcelain", "--", *file).strip():
         return "Quote DAZN Bet già pubblicate."

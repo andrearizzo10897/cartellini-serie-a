@@ -20,7 +20,7 @@ import presenza  # noqa: E402
 import config  # noqa: E402
 import pagina  # noqa: E402
 import pubblica_quote  # noqa: E402
-from fonti import (aia, api_football, arbitri_espn, daznbet, espn, espn_dettaglio, football_data,  # noqa: E402
+from fonti import (aia, api_football, arbitri_espn, articoli, daznbet, espn, espn_dettaglio, fantacalcio, football_data,  # noqa: E402
                    kickest, sky, sosfanta, transfermarkt)
 
 GIORNI_AVANTI = 8  # quanti giorni di calendario mostrare
@@ -55,12 +55,12 @@ def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti,
         fonti.append(("Controllo gialli ESPN / football-data", "att", "{} con un numero di gialli diverso: {}. Fa fede il tabellino della Lega Serie A.".format(
             _partite(len(gialli_diversi)), ", ".join(gialli_diversi))))
     totale = sum(n_uff.values())
-    testo = "ufficiali per {} su {} (ESPN {}, Sky {}, SosFanta {})".format(
-        _partite(totale), len(prossime), n_uff["ESPN"], n_uff["Sky"], n_uff["SosFanta"])
+    testo = "ufficiali per {} su {} (ESPN {}, Sky {}, SosFanta {}, Fantacalcio {}, dal PC {})".format(
+        _partite(totale), len(prossime), n_uff["ESPN"], n_uff["Sky"], n_uff["SosFanta"], n_uff.get("Fantacalcio", 0), n_uff.get("PC", 0))
     if problemi_formazioni:
         testo += "; da controllare: " + ", ".join(sorted(problemi_formazioni))
-    elif cercate and not (n_uff["Sky"] or n_uff["SosFanta"]):
-        testo += "; per {} vicin{} al calcio d'inizio Sky e SosFanta non hanno ancora pubblicato".format(
+    elif cercate and not (n_uff["Sky"] or n_uff["SosFanta"] or n_uff.get("Fantacalcio") or n_uff.get("PC")):
+        testo += "; per {} vicin{} al calcio d'inizio Sky, SosFanta e Fantacalcio non hanno ancora pubblicato".format(
             _partite(cercate), "a" if cercate == 1 else "e")
     # le ufficiali escono circa un'ora prima: a 45 minuti dal fischio dovrebbero esserci
     in_ritardo = [p for p in partite if "ev" in p and not p.get("ufficiale")
@@ -169,16 +169,6 @@ def main():
     modello_presenza = presenza.ModelloPresenza(dettagli, stagione_corrente=anno)
     quote_giocatori, nota_quote, quote_ora = daznbet.carica()
     errore_pubblica = None
-    if nota_quote:
-        stato.append(nota_quote)
-    elif quote_giocatori and not os.environ.get("GITHUB_ACTIONS"):
-        # scaricate ora dal PC: le pubblico, così le legge anche la pagina online (GitHub non raggiunge DAZN Bet)
-        try:
-            print("    " + pubblica_quote.pubblica(quote_giocatori))
-        except (RuntimeError, OSError) as e:   # git che rifiuta, file bloccato: la pagina si genera lo stesso
-            print("    quote DAZN Bet non pubblicate online: {}".format(e))
-            errore_pubblica = str(e).splitlines()[0][:200]
-            stato.append("Quote DAZN Bet scaricate ma non pubblicate online: la pagina online resta con quelle vecchie ({}).".format(errore_pubblica))
     ctx = {
         "quote_giocatori": quote_giocatori, "quote_ora": quote_ora,
         "anno": anno, "df": df, "lungo": lungo, "tabelle": tabelle, "designazioni": designazioni,
@@ -190,7 +180,8 @@ def main():
 
     partite = []
     giornata_sky = sky.giornata_corrente() if prossime else None
-    n_uff, cercate = {"ESPN": 0, "Sky": 0, "SosFanta": 0}, 0
+    n_uff, cercate = {"ESPN": 0, "Sky": 0, "SosFanta": 0, "Fantacalcio": 0, "PC": 0}, 0
+    trovate, dal_pc = {}, articoli.salvate()
     gia_viste = set()
     for ev in prossime:
         ultima_ev, ctx["squalificati"] = calcoli.formazioni_per_partita(ev, ultima_formazione, squalificati, gia_viste)
@@ -203,13 +194,18 @@ def main():
             cercate += 1
             dati_sky = sky.carica_pagina(ev, anno, giornata_sky)   # pagina "formazioni": nomi completi, anche dei soprannomi
             for fonte, cerca in (("Sky", lambda: sky.ufficiali(ev, anno, ultima_ev, giornata_sky, dati_sky)),
-                                 ("SosFanta", lambda: sosfanta.ufficiali(ev, ultima_ev, sky.alias(dati_sky)))):
+                                 ("SosFanta", lambda: sosfanta.ufficiali(ev, ultima_ev, sky.alias(dati_sky))),
+                                 ("Fantacalcio", lambda: fantacalcio.ufficiali(ev, ultima_ev, sky.alias(dati_sky)))):
                 forma_ext = cerca()
                 if forma_ext:
                     forma, e_uff = forma_ext, True
                     n_uff[fonte] += 1
+                    trovate[ev["id"]] = forma_ext
                     print("    {} - {}: formazioni ufficiali da {}".format(ev["casa"], ev["trasf"], fonte))
                     break
+        if not e_uff and ev["id"] in dal_pc:   # le ha trovate il PC e pubblicate con le quote
+            forma, e_uff = dal_pc[ev["id"]], True
+            n_uff["PC"] += 1
         if not e_uff:  # formazione non ancora uscita: mostro l'ultima schierata, segnalata come "probabile"
             forma = {}
             for lato, sq in (("home", ev["casa"]), ("away", ev["trasf"])):
@@ -219,6 +215,18 @@ def main():
                 elif sq in ultima_ev:
                     forma[lato] = {"squadra": sq, "formazione": None, "giocatori": ultima_ev[sq]}
         partite.append(calcoli.analizza_partita(ev, forma, e_uff, ctx))
+
+    articoli.salva(trovate, prossime)   # prima di pubblicare: partono insieme alle quote
+    if nota_quote:
+        stato.append(nota_quote)
+    elif quote_giocatori and not os.environ.get("GITHUB_ACTIONS"):
+        # scaricate ora dal PC: le pubblico, così le legge anche la pagina online (GitHub non raggiunge DAZN Bet)
+        try:
+            print("    " + pubblica_quote.pubblica(quote_giocatori))
+        except (RuntimeError, OSError) as e:   # git che rifiuta, file bloccato: la pagina si genera lo stesso
+            print("    quote DAZN Bet non pubblicate online: {}".format(e))
+            errore_pubblica = str(e).splitlines()[0][:200]
+            stato.append("Quote DAZN Bet scaricate ma non pubblicate online: la pagina online resta con quelle vecchie ({}).".format(errore_pubblica))
 
     fonti = riepilogo_fonti(
         anno=anno, ultimo_fd=ultimo_fd, oggi=oggi, aggiunte=aggiunte, finite=finite, prossime=prossime,
