@@ -14,7 +14,7 @@ import calcoli
 import pagina
 import server
 import utils
-from fonti import aia, articoli, daznbet, espn, fantacalcio, sky, sosfanta
+from fonti import aia, articoli, daznbet, dimarzio, espn, fantacalcio, sky, sosfanta
 
 FISCHIO = datetime(2026, 11, 7, 18, 0)
 
@@ -436,6 +436,18 @@ class LetturaArticoli(unittest.TestCase):
             self.assertIsNone(articoli.leggi(ev, {}, None, ["u"], "X"))
         self.assertIn("articolo di X senza le due formazioni (formato cambiato?)", sky.problemi)
         sky.problemi.clear()
+
+
+class TerzaFonteOnline(unittest.TestCase):
+    def test_di_marzio_con_il_suo_articolo(self):
+        url = "/news-calcio/venezia-udinese-formazioni-ufficiali-11a-giornata-serie-a-news-499228"
+        with mock.patch.object(articoli, "scarica", return_value=mock.Mock(text='<a href="%s">x</a>' % url)):
+            self.assertEqual(articoli.trova({"casa": "venezia", "trasf": "udinese"}, dimarzio.DOMINIO, dimarzio.ELENCHI, None, "Di Marzio"),
+                             ["https://www.gianlucadimarzio.com" + url])
+
+    def test_su_github_non_si_usa_fantacalcio(self):
+        codice = Path(aggiorna.__file__).read_text(encoding="utf-8")
+        self.assertIn('("Di Marzio", dimarzio.ufficiali) if os.environ.get("GITHUB_ACTIONS")', codice)
 
 
 class UfficialiDelPc(unittest.TestCase):

@@ -20,7 +20,7 @@ import presenza  # noqa: E402
 import config  # noqa: E402
 import pagina  # noqa: E402
 import pubblica_quote  # noqa: E402
-from fonti import (aia, api_football, arbitri_espn, articoli, daznbet, espn, espn_dettaglio, fantacalcio, football_data,  # noqa: E402
+from fonti import (aia, api_football, arbitri_espn, articoli, daznbet, dimarzio, espn, espn_dettaglio, fantacalcio, football_data,  # noqa: E402
                    kickest, sky, sosfanta, transfermarkt)
 
 GIORNI_AVANTI = 8  # quanti giorni di calendario mostrare
@@ -55,12 +55,11 @@ def riepilogo_fonti(anno, ultimo_fd, oggi, aggiunte, finite, prossime, mancanti,
         fonti.append(("Controllo gialli ESPN / football-data", "att", "{} con un numero di gialli diverso: {}. Fa fede il tabellino della Lega Serie A.".format(
             _partite(len(gialli_diversi)), ", ".join(gialli_diversi))))
     totale = sum(n_uff.values())
-    testo = "ufficiali per {} su {} (ESPN {}, Sky {}, SosFanta {}, Fantacalcio {}, dal PC {})".format(
-        _partite(totale), len(prossime), n_uff["ESPN"], n_uff["Sky"], n_uff["SosFanta"], n_uff.get("Fantacalcio", 0), n_uff.get("PC", 0))
+    testo = "ufficiali per {} su {} ({})".format(_partite(totale), len(prossime), ", ".join("{} {}".format(k, v) for k, v in n_uff.items()))
     if problemi_formazioni:
         testo += "; da controllare: " + ", ".join(sorted(problemi_formazioni))
-    elif cercate and not (n_uff["Sky"] or n_uff["SosFanta"] or n_uff.get("Fantacalcio") or n_uff.get("PC")):
-        testo += "; per {} vicin{} al calcio d'inizio Sky, SosFanta e Fantacalcio non hanno ancora pubblicato".format(
+    elif cercate and not any(v for k, v in n_uff.items() if k != "ESPN"):
+        testo += "; per {} vicin{} al calcio d'inizio le altre fonti non hanno ancora pubblicato".format(
             _partite(cercate), "a" if cercate == 1 else "e")
     # le ufficiali escono circa un'ora prima: a 45 minuti dal fischio dovrebbero esserci
     in_ritardo = [p for p in partite if "ev" in p and not p.get("ufficiale")
@@ -180,7 +179,9 @@ def main():
 
     partite = []
     giornata_sky = sky.giornata_corrente() if prossime else None
-    n_uff, cercate = {"ESPN": 0, "Sky": 0, "SosFanta": 0, "Fantacalcio": 0, "PC": 0}, 0
+    # terza fonte: Fantacalcio dal PC, Di Marzio su GitHub
+    terza, leggi_terza = ("Di Marzio", dimarzio.ufficiali) if os.environ.get("GITHUB_ACTIONS") else ("Fantacalcio", fantacalcio.ufficiali)
+    n_uff, cercate = {"ESPN": 0, "Sky": 0, "SosFanta": 0, terza: 0, "dal PC": 0}, 0
     trovate, dal_pc = {}, articoli.salvate()
     gia_viste = set()
     for ev in prossime:
@@ -195,7 +196,7 @@ def main():
             dati_sky = sky.carica_pagina(ev, anno, giornata_sky)   # pagina "formazioni": nomi completi, anche dei soprannomi
             for fonte, cerca in (("Sky", lambda: sky.ufficiali(ev, anno, ultima_ev, giornata_sky, dati_sky)),
                                  ("SosFanta", lambda: sosfanta.ufficiali(ev, ultima_ev, sky.alias(dati_sky))),
-                                 ("Fantacalcio", lambda: fantacalcio.ufficiali(ev, ultima_ev, sky.alias(dati_sky)))):
+                                 (terza, lambda: leggi_terza(ev, ultima_ev, sky.alias(dati_sky)))):
                 forma_ext = cerca()
                 if forma_ext:
                     forma, e_uff = forma_ext, True
@@ -205,7 +206,7 @@ def main():
                     break
         if not e_uff and ev["id"] in dal_pc:   # le ha trovate il PC e pubblicate con le quote
             forma, e_uff = dal_pc[ev["id"]], True
-            n_uff["PC"] += 1
+            n_uff["dal PC"] += 1
         if not e_uff:  # formazione non ancora uscita: mostro l'ultima schierata, segnalata come "probabile"
             forma = {}
             for lato, sq in (("home", ev["casa"]), ("away", ev["trasf"])):
