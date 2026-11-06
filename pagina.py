@@ -266,7 +266,7 @@ var eta=$('#eta'),rl=$('#ricarica');
 if(eta){var gen=Date.parse(eta.getAttribute('data-gen'));
  var tx=function(m){if(m<1)return 'adesso';if(m<60)return m+' min fa';var h=Math.floor(m/60),r=m%60;if(h<48)return h+' h'+(r?' '+r+' min':'')+' fa';return Math.floor(h/24)+' giorni fa'};
  var ag_eta=function(){if(isNaN(gen)){eta.textContent='';return}var m=Math.max(0,Math.round((Date.now()-gen)/60000));
-  eta.textContent='Dati di '+tx(m);eta.className='eta'+(m>180?' molto':(m>45?' vecchio':''));if(rl)rl.hidden=m<=45;
+  eta.textContent='Dati di '+tx(m);eta.className='eta'+(m>180?' molto':(m>45?' vecchio':''));
   $$('.no-uff').forEach(function(e){var f=Date.parse(e.getAttribute('data-fischio')),o=Date.now();e.classList.toggle('hid',!(o>=f-2400000&&o<f))});
   $$('.q.ev').forEach(function(e){var f=Date.parse(e.getAttribute('data-fischio'));e.classList.toggle('scaduto',m>45||(!isNaN(f)&&Date.now()>=f))})};
  ag_eta();setInterval(ag_eta,60000);document.addEventListener('visibilitychange',ag_eta);window.addEventListener('focus',ag_eta);
@@ -855,7 +855,7 @@ def genera(partite, sezioni, percorso):
 <title>Cartellini Serie A</title><style>{css}</style><noscript><style>.hid{{display:block!important}}nav.tabs,.az,#tema{{display:none!important}}</style></noscript></head>
 <body><div class="wrap">
 <header class="hero"><div class="tit"><h1><span class="logo"></span>Cartellini Serie A</h1><div class="muted">Stagione {anno}/{anno2} · Media Serie A (ultime 380 partite): {media} gialli a partita ({over35} oltre 3,5 · {over45} oltre 4,5 · {over55} oltre 5,5)</div></div>
-<div class="small info"><span>Aggiornato il {agg} · {fin} partite di quest'anno analizzate</span><span id="eta" class="eta" data-gen="{gen}" title="Da quanto tempo sono stati calcolati i dati. Con il PC acceso la versione online si aggiorna ogni 20 minuti circa; con il PC spento ogni 40-50 minuti, dalle 10 a mezzanotte."></span><button id="ricarica" class="tema" type="button" hidden>Ricarica</button><button id="tema" class="tema" type="button">Tema chiaro/scuro</button></div><div class="az"><button id="agg" class="agg" type="button">Aggiorna</button><span id="msg"></span></div></header>
+<div class="small info"><span>Aggiornato il {agg} · {fin} partite di quest'anno analizzate</span><span id="eta" class="eta" data-gen="{gen}" title="Da quanto tempo sono stati calcolati i dati. Con il PC acceso la versione online si aggiorna ogni 20 minuti circa; con il PC spento ogni 40-50 minuti, dalle 10 a mezzanotte."></span><button id="ricarica" class="tema" type="button">Ricarica</button><button id="tema" class="tema" type="button">Tema chiaro/scuro</button></div><div class="az"><button id="agg" class="agg" type="button">Aggiorna</button><span id="msg"></span></div></header>
 <noscript><div class="note"><b>JavaScript disattivato</b> (succede nelle anteprime di Files, Drive o email): mostro tutte le partite e tutte le sezioni una sotto l'altra. Per avere schede e pulsante Aggiorna apri il file con Safari o Chrome.</div></noscript><nav class="tabs" role="tablist">{nav}</nav>{sez}
 </div><script>{js}</script></body></html>""".format(
         css=CSS + css_stemmi, js=JS, anno=sezioni["aggiornato"].year if sezioni["aggiornato"].month >= 7 else sezioni["aggiornato"].year - 1,
