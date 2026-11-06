@@ -195,7 +195,7 @@ def main():
     for ev in prossime:
         ultima_ev, ctx["squalificati"] = calcoli.formazioni_per_partita(ev, ultima_formazione, squalificati, gia_viste)
         gia_viste |= {ev["casa"], ev["trasf"]}
-        forma = espn.formazioni(ev["id"], ev["stato"])
+        forma = espn_ev = espn.formazioni(ev["id"], ev["stato"])
         e_uff = espn.ufficiale(forma)
         n_uff["ESPN"] += bool(e_uff)
         if not e_uff and ev["inizio"] - config.adesso() < timedelta(hours=5):
@@ -213,7 +213,10 @@ def main():
         if not e_uff:  # formazione non ancora uscita: mostro l'ultima schierata, segnalata come "probabile"
             forma = {}
             for lato, sq in (("home", ev["casa"]), ("away", ev["trasf"])):
-                if sq in ultima_ev:
+                vera = (espn_ev.get(lato) or {})
+                if sum(1 for g in vera.get("giocatori", []) if g["titolare"]) == 11:
+                    forma[lato] = vera   # ESPN a volte ha gli undici di una squadra sola: quelli sono già veri (il valore atteso resta nascosto)
+                elif sq in ultima_ev:
                     forma[lato] = {"squadra": sq, "formazione": None, "giocatori": ultima_ev[sq]}
         partite.append(calcoli.analizza_partita(ev, forma, e_uff, ctx))
 

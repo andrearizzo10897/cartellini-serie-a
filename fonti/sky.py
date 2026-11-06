@@ -165,7 +165,23 @@ def _trova(nome_sky, rosa, usati, portiere=False):
         return primi[0] if len(primi) == 1 else None    # due Diallo o due Terracciano nello stesso ruolo: non si indovina
     # soprannomi ("Kike Perez" per Enrique Pérez): se l'ultima parola è il cognome di un solo giocatore, è lui
     sol = [g for g in rosa if g["id"] not in usati and t[-1] in _tok(g["nome"])[1:]]
-    return sol[0] if len(sol) == 1 else None
+    if len(sol) == 1:
+        return sol[0]
+    if sol:
+        return None
+    # refuso di una lettera ("Abakwah" per Abankwah, SosFanta 6/11/2026): solo se il giocatore possibile è uno
+    quasi = [g for g in rosa if g["id"] not in usati and any(_una_lettera(t[-1], p) for p in _tok(g["nome"]))]
+    return quasi[0] if len(quasi) == 1 else None
+
+
+def _una_lettera(a, b):
+    """True se due parole di almeno 5 lettere differiscono per una sola lettera (cambiata, in più o in meno)."""
+    if len(a) < 5 or len(b) < 5 or abs(len(a) - len(b)) > 1 or a == b:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) == 1
+    corta, lunga = sorted((a, b), key=len)
+    return any(lunga[:i] + lunga[i + 1:] == corta for i in range(len(lunga)))
 
 
 def _trova_completo(completo, rosa, usati, portiere=False, numero=None):

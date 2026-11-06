@@ -14,7 +14,7 @@ import calcoli
 import pagina
 import server
 import utils
-from fonti import aia, daznbet, espn, sky
+from fonti import aia, daznbet, espn, sky, sosfanta
 
 FISCHIO = datetime(2026, 11, 7, 18, 0)
 
@@ -340,6 +340,51 @@ class CorrezioniEspn(unittest.TestCase):
 
     def test_senza_data_resta_com_e(self):
         self.assertFalse(espn._da_rileggere({}, Path("non_serve.json")))
+
+
+class SosFantaNuovoFormato(unittest.TestCase):
+    """6/11/2026: articolo in /squadra/..., con «Abakwah» per Abankwah; le ufficiali c'erano ma la pagina non le prendeva."""
+    EV = {"casa": "venezia", "trasf": "udinese", "id_casa": "1", "id_trasf": "2"}
+    ARTICOLO = "https://www.sosfanta.com/squadra/udinese/venezia-udinese-formazioni-ufficiali-fantacalcio/"
+
+    def test_link_dagli_elenchi(self):
+        with mock.patch.object(sosfanta, "scarica", return_value=mock.Mock(text='<a href="%s">x</a>' % self.ARTICOLO)):
+            self.assertEqual(sosfanta._link(self.EV), self.ARTICOLO)
+
+    def test_qualunque_percorso_va_bene(self):
+        # SosFanta cambia spesso: conta il nome dell'articolo, non dove sta
+        for url in ("https://www.sosfanta.com/news/formazioni-ufficiali-venezia-udinese-zaniolo/",
+                    "https://www.sosfanta.com/2027/nuova-sezione/venezia-e-udinese-le-formazioni-ufficiali/",
+                    "https://www.sosfanta.com/x/venezia-udinese-ufficiali"):
+            with mock.patch.object(sosfanta, "scarica", return_value=mock.Mock(text=url + '"')):
+                self.assertEqual(sosfanta._link(self.EV), url, url)
+
+    def test_si_trova_con_la_ricerca_del_sito(self):
+        def finta(url, **_):
+            return mock.Mock(text=self.ARTICOLO if "?s=formazioni+ufficiali+venezia+udinese" in url else "niente")
+        with mock.patch.object(sosfanta, "scarica", side_effect=finta):
+            self.assertEqual(sosfanta._link(self.EV), self.ARTICOLO)
+
+    def test_altre_partite_e_probabili_non_vanno_bene(self):
+        for url in ("https://www.sosfanta.com/squadra/udinese/venezia-roma-formazioni-ufficiali-fantacalcio/",
+                    "https://www.sosfanta.com/squadra/udinese/udinese-venezia-formazioni-ufficiali-fantacalcio/",     # il ritorno
+                    "https://www.sosfanta.com/news/venezia-udinese-probabili-formazioni-ufficiali/x-y/"):
+            with mock.patch.object(sosfanta, "scarica", return_value=mock.Mock(text=url)):
+                self.assertIsNone(sosfanta._link(self.EV), url)
+
+    def test_articolo_di_un_altro_giorno_si_scarta(self):
+        inizio = datetime(2026, 11, 6, 20, 45)
+        self.assertTrue(sosfanta._del_giorno("", "marco astori 6 novembre - 19:35", inizio))
+        self.assertTrue(sosfanta._del_giorno('"datePublished":"2026-11-06T19:35"', "", inizio))
+        self.assertFalse(sosfanta._del_giorno('"datePublished":"2025-03-02"', "2 marzo", inizio))
+
+    def test_refuso_di_una_lettera_solo_se_il_giocatore_e_uno(self):
+        rosa = [{"id": "1", "nome": "James Abankwah", "ruolo_espn": "CD"}, {"id": "2", "nome": "Matteo Palma", "ruolo_espn": "CD"}]
+        self.assertEqual(sky._trova("Abakwah", rosa, set())["id"], "1")
+        doppio = rosa + [{"id": "3", "nome": "Luca Abakwahh", "ruolo_espn": "CD"}]
+        self.assertIsNone(sky._trova("Abakwah", doppio, set()))
+        self.assertIsNone(sky._trova("Palmi", [{"id": "2", "nome": "Matteo Palma"}, {"id": "4", "nome": "Ugo Palmo"}], set()))
+        self.assertIsNone(sky._trova("Ross", [{"id": "5", "nome": "Mario Rossi"}], set()))   # troppo corto per fidarsi
 
 
 class FileSicuri(unittest.TestCase):

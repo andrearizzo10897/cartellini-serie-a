@@ -251,7 +251,7 @@ class SosFantaConNomiCompleti(unittest.TestCase):
         dati = leggi("sky_formazioni_ufficiali.html")
         rose = rose_dalla_pagina(dati)
         with mock.patch.dict(sky.SOPRANNOMI, clear=True), \
-                mock.patch.object(sosfanta, "_link", return_value="https://www.sosfanta.com/news/x/"), \
+                mock.patch.object(sosfanta, "_articoli", return_value=["https://www.sosfanta.com/news/x/"]), \
                 mock.patch.object(sosfanta, "scarica", return_value=mock.Mock(text="<p>%s</p>" % self.ARTICOLO)), \
                 mock.patch.object(sky, "_rosa", side_effect=lambda id_sq: rose[id_sq]):
             return sosfanta.ufficiali(EV_FC, {}, tradotti)
