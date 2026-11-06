@@ -270,6 +270,13 @@ if(eta){var gen=Date.parse(eta.getAttribute('data-gen'));
   $$('.no-uff').forEach(function(e){var f=Date.parse(e.getAttribute('data-fischio')),o=Date.now();e.classList.toggle('hid',!(o>=f-2400000&&o<f))});
   $$('.q.ev').forEach(function(e){var f=Date.parse(e.getAttribute('data-fischio'));e.classList.toggle('scaduto',m>45||(!isNaN(f)&&Date.now()>=f))})};
  ag_eta();setInterval(ag_eta,60000);document.addEventListener('visibilitychange',ag_eta);window.addEventListener('focus',ag_eta);
+ // una pagina aperta sul telefono non si ricarica da sola: all'apertura, al ritorno nell'app e ogni 5 minuti guarda se sul sito ce n'è una più nuova.
+ // Il sito è pubblicato qualche minuto dopo la generazione: conta solo oltre 5 minuti, e ogni versione fa ricaricare una volta sola
+ var nuova=function(){if(location.protocol==='file:'||isNaN(gen)||document.hidden)return;
+  fetch(location.pathname+'?c='+Date.now(),{method:'HEAD',cache:'no-store'}).then(function(r){var lm=Date.parse(r.headers.get('last-modified'));
+   if(lm-gen>300000&&leggi('agg_lm')!==String(lm)){ricorda('agg_lm',String(lm));ricorda('agg_y',String(window.scrollY));location.href=location.pathname+'?r='+Date.now()}}).catch(function(){})};
+ nuova();setInterval(nuova,300000);document.addEventListener('visibilitychange',nuova);window.addEventListener('focus',nuova);
+ var agy=leggi('agg_y');if(agy){ricorda('agg_y','');setTimeout(function(){window.scrollTo(0,+agy)},300)}
  if(rl)rl.addEventListener('click',function(){if(location.protocol==='file:'){location.reload()}else{location.href=location.pathname+'?r='+Date.now()}})}
 var dt=$('#det');if(dt){dt.addEventListener('change',function(){document.body.classList.toggle('det-on',dt.checked)})}
 var tm=$('#tema');if(tm){tm.addEventListener('click',function(){var d=document.documentElement,c=d.getAttribute('data-theme');
