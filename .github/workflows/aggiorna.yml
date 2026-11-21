@@ -2,7 +2,7 @@
 name: Aggiorna cartellini
 on:
   schedule:
-    - cron: "*/10 8-22 * * *"   # richiesto ogni 10 minuti: GitHub ritarda gli avvii programmati, quindi in pratica ogni ~20; dalle 10 alle 24 ora italiana (orario UTC)
+    - cron: "*/10 8-22 * * *"   # richiesto ogni 10 minuti, ma dall'8/11/2026 GitHub lo avvia solo 2-3 volte al giorno: serve solo a far ripartire la catena del job «prossimo» se si interrompe
   workflow_dispatch: {}          # pulsante "Run workflow" per aggiornare subito a mano
   push:                          # ogni invio di quote dal PC (ogni 20 minuti con Avvia acceso) aggiorna subito la pagina online
     paths: [quote_daznbet.json, formazioni_ufficiali.json]
@@ -67,17 +67,40 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         if: steps.pw.outputs.ok == 'si'
         with: { path: site }
+      # Pages a volte risponde «Deployment failed, try again later» (21/11/2026: pagina online ferma 3 ore): si riprova dopo un minuto
       - id: deploy
         if: steps.pw.outputs.ok == 'si'
+        continue-on-error: true
         uses: actions/deploy-pages@v4
-  # Il cron di GitHub salta molti avvii: nelle 2 ore prima di una partita senza ufficiali il workflow fa ripartire se stesso,
-  # senza PC e senza token esterni. Si ferma quando le trova o quando la partita inizia.
+      - if: steps.pw.outputs.ok == 'si' && steps.deploy.outcome == 'failure'
+        run: sleep 60
+      - id: deploy2
+        if: steps.pw.outputs.ok == 'si' && steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+  # Dall'8/11/2026 il cron di GitHub parte solo 2-3 volte al giorno: ogni giro fa ripartire il successivo, senza PC e senza
+  # token esterni. Dalle 10 a mezzanotte (ora italiana) dopo ~15 minuti, ~7 se una partita entro 2 ore non ha le ufficiali;
+  # di notte aspetta fino alle 10 (al massimo 5 ore e mezza per volta). Un invio dal PC o il cron annullano il giro in corso
+  # (concurrency) e la catena prosegue da quello nuovo: ne resta sempre una sola. Con !cancelled() un giro annullato non riparte.
   prossimo:
     needs: build
-    if: needs.build.outputs.richiama == 'si'
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 345
     steps:
-      - run: sleep 420
+      - name: Attesa prima del prossimo giro
+        env:
+          RICHIAMA: ${{ needs.build.outputs.richiama }}
+        run: |
+          ora=$(TZ=Europe/Rome date +%-H)
+          if [ "$ora" -ge 10 ]; then
+            if [ "$RICHIAMA" = "si" ]; then attesa=420; else attesa=840; fi
+          else
+            attesa=$(( $(TZ=Europe/Rome date -d "today 10:00" +%s) - $(date +%s) ))
+            [ "$attesa" -gt 19800 ] && attesa=19800
+            [ "$attesa" -lt 60 ] && attesa=60
+          fi
+          echo "Ora italiana $ora: il prossimo giro parte tra $attesa secondi"
+          sleep "$attesa"
       - run: gh workflow run aggiorna.yml --ref main -R "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
